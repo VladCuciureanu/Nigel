@@ -64,7 +64,3 @@ deno task test
 # Run in dev mode
 deno task dev
 ```
-
-## License
-
-MIT
