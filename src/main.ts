@@ -2,7 +2,7 @@
 
 import process from "node:process";
 import { parseArgs } from "node:util";
-import { exists, deleteFile, deleteDirectory } from "./fs.ts";
+import { exists, safeDelete } from "./fs.ts";
 import { runReview } from "./review.ts";
 import { nextTicketId } from "./ticket.ts";
 import { appendAudit, readAuditLog } from "./audit.ts";
@@ -84,12 +84,9 @@ async function handleRm(
 
       console.log(`  ${ticketId} — ${msg}`);
 
-      if (!options.dryRun) {
-        if (isDirectory) {
-          await deleteDirectory(file);
-        } else {
-          await deleteFile(file);
-        }
+      if (!options.dryRun && !(await safeDelete(file, isDirectory))) {
+        exitCode = 1;
+        continue;
       }
 
       await appendAudit({
@@ -109,10 +106,9 @@ async function handleRm(
       console.log(`  ${ticketId} — ✓ ${result.message}`);
 
       if (!options.dryRun) {
-        if (isDirectory) {
-          await deleteDirectory(file);
-        } else {
-          await deleteFile(file);
+        if (!(await safeDelete(file, isDirectory))) {
+          exitCode = 1;
+          continue;
         }
       } else {
         console.log(`  ${ticketId} — (dry run: file not actually deleted)`);
