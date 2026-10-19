@@ -6,6 +6,7 @@ import { exists, deleteFile, deleteDirectory } from "./fs.ts";
 import { runReview } from "./review.ts";
 import { nextTicketId } from "./ticket.ts";
 import { appendAudit, readAuditLog } from "./audit.ts";
+import { parseApprovalRate } from "./args.ts";
 import {
   FORCE_MESSAGES,
   FORCE_ESCALATION_MESSAGES,
@@ -196,7 +197,7 @@ async function main(): Promise<void> {
       return;
     }
 
-    const approvalRate = Math.max(0, Math.min(100, parseInt(args["approval-rate"] as string, 10) || 70));
+    const approvalRate = parseApprovalRate(args["approval-rate"] as string | undefined);
 
     const exitCode = await handleRm(files, {
       dryRun: args["dry-run"] === true,
