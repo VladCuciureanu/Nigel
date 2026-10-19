@@ -1,12 +1,17 @@
-import { assertEquals } from "jsr:@std/assert";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { mkdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import process from "node:process";
 import { appendAudit, readAuditLog } from "../src/audit.ts";
 
-Deno.test("appendAudit and readAuditLog round-trip", async () => {
+test("appendAudit and readAuditLog round-trip", async () => {
   // Use a temp HOME to avoid polluting real audit log
-  const tmpHome = `/tmp/nigel-audit-test-${Date.now()}`;
-  await Deno.mkdir(tmpHome);
-  const originalHome = Deno.env.get("HOME");
-  Deno.env.set("HOME", tmpHome);
+  const tmpHome = join(tmpdir(), `nigel-audit-test-${Date.now()}`);
+  await mkdir(tmpHome);
+  const originalHome = process.env.HOME;
+  process.env.HOME = tmpHome;
 
   try {
     await appendAudit({
@@ -18,30 +23,30 @@ Deno.test("appendAudit and readAuditLog round-trip", async () => {
     });
 
     const log = await readAuditLog();
-    assertEquals(log.includes("NGL-00001"), true);
-    assertEquals(log.includes("APPROVED"), true);
-    assertEquals(log.includes("/tmp/test.txt"), true);
+    assert.equal(log.includes("NGL-00001"), true);
+    assert.equal(log.includes("APPROVED"), true);
+    assert.equal(log.includes("/tmp/test.txt"), true);
   } finally {
     if (originalHome) {
-      Deno.env.set("HOME", originalHome);
+      process.env.HOME = originalHome;
     }
-    await Deno.remove(tmpHome, { recursive: true });
+    await rm(tmpHome, { recursive: true });
   }
 });
 
-Deno.test("readAuditLog returns message when no log exists", async () => {
-  const tmpHome = `/tmp/nigel-audit-test-empty-${Date.now()}`;
-  await Deno.mkdir(tmpHome);
-  const originalHome = Deno.env.get("HOME");
-  Deno.env.set("HOME", tmpHome);
+test("readAuditLog returns message when no log exists", async () => {
+  const tmpHome = join(tmpdir(), `nigel-audit-test-empty-${Date.now()}`);
+  await mkdir(tmpHome);
+  const originalHome = process.env.HOME;
+  process.env.HOME = tmpHome;
 
   try {
     const log = await readAuditLog();
-    assertEquals(log, "No audit records found.");
+    assert.equal(log, "No audit records found.");
   } finally {
     if (originalHome) {
-      Deno.env.set("HOME", originalHome);
+      process.env.HOME = originalHome;
     }
-    await Deno.remove(tmpHome, { recursive: true });
+    await rm(tmpHome, { recursive: true });
   }
 });

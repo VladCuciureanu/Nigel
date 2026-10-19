@@ -1,43 +1,49 @@
-import { assertEquals } from "jsr:@std/assert";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { exists, deleteFile, deleteDirectory } from "../src/fs.ts";
 
-Deno.test("exists returns false for non-existent path", async () => {
-  const result = await exists("/tmp/nigel-test-nonexistent-" + Date.now());
-  assertEquals(result.found, false);
-  assertEquals(result.isDirectory, false);
+const tmp = tmpdir();
+
+test("exists returns false for non-existent path", async () => {
+  const result = await exists(join(tmp, "nigel-test-nonexistent-" + Date.now()));
+  assert.equal(result.found, false);
+  assert.equal(result.isDirectory, false);
 });
 
-Deno.test("exists returns true for existing file", async () => {
-  const path = `/tmp/nigel-test-${Date.now()}.txt`;
-  await Deno.writeTextFile(path, "test");
+test("exists returns true for existing file", async () => {
+  const path = join(tmp, `nigel-test-${Date.now()}.txt`);
+  await writeFile(path, "test");
   const result = await exists(path);
-  assertEquals(result.found, true);
-  assertEquals(result.isDirectory, false);
-  await Deno.remove(path);
+  assert.equal(result.found, true);
+  assert.equal(result.isDirectory, false);
+  await rm(path);
 });
 
-Deno.test("exists returns isDirectory true for directories", async () => {
-  const path = `/tmp/nigel-test-dir-${Date.now()}`;
-  await Deno.mkdir(path);
+test("exists returns isDirectory true for directories", async () => {
+  const path = join(tmp, `nigel-test-dir-${Date.now()}`);
+  await mkdir(path);
   const result = await exists(path);
-  assertEquals(result.found, true);
-  assertEquals(result.isDirectory, true);
-  await Deno.remove(path);
+  assert.equal(result.found, true);
+  assert.equal(result.isDirectory, true);
+  await rm(path, { recursive: true });
 });
 
-Deno.test("deleteFile removes a file", async () => {
-  const path = `/tmp/nigel-test-del-${Date.now()}.txt`;
-  await Deno.writeTextFile(path, "test");
+test("deleteFile removes a file", async () => {
+  const path = join(tmp, `nigel-test-del-${Date.now()}.txt`);
+  await writeFile(path, "test");
   await deleteFile(path);
   const result = await exists(path);
-  assertEquals(result.found, false);
+  assert.equal(result.found, false);
 });
 
-Deno.test("deleteDirectory removes a directory recursively", async () => {
-  const path = `/tmp/nigel-test-dir-del-${Date.now()}`;
-  await Deno.mkdir(path);
-  await Deno.writeTextFile(`${path}/file.txt`, "test");
+test("deleteDirectory removes a directory recursively", async () => {
+  const path = join(tmp, `nigel-test-dir-del-${Date.now()}`);
+  await mkdir(path);
+  await writeFile(join(path, "file.txt"), "test");
   await deleteDirectory(path);
   const result = await exists(path);
-  assertEquals(result.found, false);
+  assert.equal(result.found, false);
 });

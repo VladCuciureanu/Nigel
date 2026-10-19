@@ -1,3 +1,5 @@
+import { writeSync } from "node:fs";
+import process from "node:process";
 import {
   APPROVAL_MESSAGES,
   DENIAL_REASONS,
@@ -19,18 +21,17 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function showSpinner(text: string, durationMs: number): Promise<void> {
-  const encoder = new TextEncoder();
   let frame = 0;
   const interval = 80;
   const steps = Math.floor(durationMs / interval);
 
   for (let i = 0; i < steps; i++) {
     const line = `\r  ${SPINNER_FRAMES[frame % SPINNER_FRAMES.length]} ${text}`;
-    Deno.stderr.writeSync(encoder.encode(line));
+    writeSync(process.stderr.fd, line);
     frame++;
     await sleep(interval);
   }
-  Deno.stderr.writeSync(encoder.encode(`\r  ✓ ${text}\n`));
+  writeSync(process.stderr.fd, `\r  ✓ ${text}\n`);
 }
 
 export async function runReview(
@@ -46,14 +47,13 @@ export async function runReview(
   const totalDuration = 3000 + Math.random() * 2000; // 3-5 seconds
   const stepDuration = totalDuration / statuses.length;
 
-  const encoder = new TextEncoder();
-  Deno.stderr.writeSync(encoder.encode(`\n  Request ${ticketId} submitted. Review in progress.\n\n`));
+  writeSync(process.stderr.fd, `\n  Request ${ticketId} submitted. Review in progress.\n\n`);
 
   for (const status of statuses) {
     await showSpinner(status, stepDuration);
   }
 
-  Deno.stderr.writeSync(encoder.encode("\n"));
+  writeSync(process.stderr.fd, "\n");
 
   const approved = Math.random() * 100 < approvalRate;
 

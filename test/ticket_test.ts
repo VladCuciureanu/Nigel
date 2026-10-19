@@ -1,21 +1,22 @@
-import { assertEquals } from "jsr:@std/assert";
+import { test } from "node:test";
+import assert from "node:assert/strict";
 import { nextTicketId, resetCounter } from "../src/ticket.ts";
 
-Deno.test("nextTicketId generates sequential IDs", () => {
+test("nextTicketId generates sequential IDs", () => {
   resetCounter();
-  assertEquals(nextTicketId(), "NGL-00001");
-  assertEquals(nextTicketId(), "NGL-00002");
-  assertEquals(nextTicketId(), "NGL-00003");
+  assert.equal(nextTicketId(), "NGL-00001");
+  assert.equal(nextTicketId(), "NGL-00002");
+  assert.equal(nextTicketId(), "NGL-00003");
 });
 
-Deno.test("resetCounter resets the sequence", () => {
+test("resetCounter resets the sequence", () => {
   resetCounter();
-  assertEquals(nextTicketId(), "NGL-00001");
+  assert.equal(nextTicketId(), "NGL-00001");
 });
 
-Deno.test("ticket IDs are zero-padded to 5 digits", () => {
+test("ticket IDs are zero-padded to 5 digits", () => {
   resetCounter();
   const id = nextTicketId();
-  assertEquals(id.length, "NGL-00001".length);
-  assertEquals(id.startsWith("NGL-"), true);
+  assert.equal(id.length, "NGL-00001".length);
+  assert.equal(id.startsWith("NGL-"), true);
 });

@@ -1,16 +1,18 @@
+import { rm, stat as fsStat } from "node:fs/promises";
+
 export async function exists(path: string): Promise<{ found: boolean; isDirectory: boolean }> {
   try {
-    const stat = await Deno.stat(path);
-    return { found: true, isDirectory: stat.isDirectory };
+    const stat = await fsStat(path);
+    return { found: true, isDirectory: stat.isDirectory() };
   } catch {
     return { found: false, isDirectory: false };
   }
 }
 
 export async function deleteFile(path: string): Promise<void> {
-  await Deno.remove(path);
+  await rm(path);
 }
 
 export async function deleteDirectory(path: string): Promise<void> {
-  await Deno.remove(path, { recursive: true });
+  await rm(path, { recursive: true });
 }

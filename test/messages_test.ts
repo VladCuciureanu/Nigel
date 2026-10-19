@@ -1,4 +1,5 @@
-import { assertEquals, assertNotEquals } from "jsr:@std/assert";
+import { test } from "node:test";
+import assert from "node:assert/strict";
 import {
   APPROVAL_MESSAGES,
   DENIAL_REASONS,
@@ -9,35 +10,35 @@ import {
   REVIEW_STATUSES,
 } from "../src/messages.ts";
 
-Deno.test("pickRandom returns an element from the pool", () => {
+test("pickRandom returns an element from the pool", () => {
   const pool = ["a", "b", "c"];
   const result = pickRandom(pool);
-  assertEquals(pool.includes(result), true);
+  assert.equal(pool.includes(result), true);
 });
 
-Deno.test("pickMultiple returns the requested count", () => {
+test("pickMultiple returns the requested count", () => {
   const pool = ["a", "b", "c", "d", "e"];
   const result = pickMultiple(pool, 3);
-  assertEquals(result.length, 3);
+  assert.equal(result.length, 3);
 });
 
-Deno.test("pickMultiple does not exceed pool size", () => {
+test("pickMultiple does not exceed pool size", () => {
   const pool = ["a", "b"];
   const result = pickMultiple(pool, 5);
-  assertEquals(result.length, 2);
+  assert.equal(result.length, 2);
 });
 
-Deno.test("pickMultiple returns unique elements", () => {
+test("pickMultiple returns unique elements", () => {
   const pool = ["a", "b", "c", "d", "e"];
   const result = pickMultiple(pool, 5);
   const unique = new Set(result);
-  assertEquals(unique.size, result.length);
+  assert.equal(unique.size, result.length);
 });
 
-Deno.test("all message pools are non-empty", () => {
-  assertNotEquals(REVIEW_STATUSES.length, 0);
-  assertNotEquals(DENIAL_REASONS.length, 0);
-  assertNotEquals(APPROVAL_MESSAGES.length, 0);
-  assertNotEquals(FORCE_MESSAGES.length, 0);
-  assertNotEquals(FORCE_ESCALATION_MESSAGES.length, 0);
+test("all message pools are non-empty", () => {
+  assert.notEqual(REVIEW_STATUSES.length, 0);
+  assert.notEqual(DENIAL_REASONS.length, 0);
+  assert.notEqual(APPROVAL_MESSAGES.length, 0);
+  assert.notEqual(FORCE_MESSAGES.length, 0);
+  assert.notEqual(FORCE_ESCALATION_MESSAGES.length, 0);
 });

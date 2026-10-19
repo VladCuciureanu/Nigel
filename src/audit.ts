@@ -1,7 +1,9 @@
+import { appendFile, mkdir, readFile } from "node:fs/promises";
+import process from "node:process";
 import { exists } from "./fs.ts";
 
 function getAuditDir(): string {
-  const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || ".";
+  const home = process.env.HOME || process.env.USERPROFILE || ".";
   return `${home}/.nigel`;
 }
 
@@ -25,10 +27,10 @@ export async function appendAudit(entry: AuditEntry): Promise<void> {
   const dir = getAuditDir();
   const { found } = await exists(dir);
   if (!found) {
-    await Deno.mkdir(dir, { recursive: true });
+    await mkdir(dir, { recursive: true });
   }
   const line = formatEntry(entry) + "\n";
-  await Deno.writeTextFile(getAuditPath(), line, { append: true });
+  await appendFile(getAuditPath(), line, "utf8");
 }
 
 export async function readAuditLog(): Promise<string> {
@@ -37,5 +39,5 @@ export async function readAuditLog(): Promise<string> {
   if (!found) {
     return "No audit records found.";
   }
-  return await Deno.readTextFile(path);
+  return await readFile(path, "utf8");
 }

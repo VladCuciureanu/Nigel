@@ -1,6 +1,7 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-env
+#!/usr/bin/env node
 
-import { parseArgs } from "jsr:@std/cli/parse-args";
+import process from "node:process";
+import { parseArgs } from "node:util";
 import { exists, deleteFile, deleteDirectory } from "./fs.ts";
 import { runReview } from "./review.ts";
 import { nextTicketId } from "./ticket.ts";
@@ -141,59 +142,75 @@ async function handleRm(
 }
 
 async function main(): Promise<void> {
-  const args = parseArgs(Deno.args, {
-    boolean: ["help", "version", "dry-run", "force", "appeal", "recursive"],
-    string: ["approval-rate"],
-    alias: { r: "recursive" },
-    default: { "approval-rate": "70" },
+  // Non-strict to match @std/cli parseArgs: unknown flags are ignored, --no-<flag> negates.
+  const { values: args, positionals } = parseArgs({
+    args: process.argv.slice(2),
+    options: {
+      help: { type: "boolean", default: false },
+      version: { type: "boolean", default: false },
+      "dry-run": { type: "boolean", default: false },
+      force: { type: "boolean", default: false },
+      appeal: { type: "boolean", default: false },
+      recursive: { type: "boolean", short: "r", default: false },
+      "approval-rate": { type: "string", default: "70" },
+    },
+    strict: false,
+    allowPositionals: true,
+    allowNegative: true,
   });
 
   if (args.help) {
     console.log(HELP);
-    Deno.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   if (args.version) {
     console.log(`nigel v${VERSION}`);
-    Deno.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
-  const command = args._[0]?.toString();
+  const command = positionals[0];
 
   if (command === "status") {
     console.log(STATUS_DASHBOARD);
-    Deno.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   if (command === "audit") {
     const log = await readAuditLog();
     console.log(log);
-    Deno.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   if (command === "rm" || args.appeal) {
-    const files = args._.slice(command === "rm" ? 1 : 0).map(String);
+    const files = positionals.slice(command === "rm" ? 1 : 0);
 
     if (files.length === 0) {
       console.error("Error: no files specified.");
       console.error("Usage: nigel rm <file> [files...]");
-      Deno.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     const approvalRate = Math.max(0, Math.min(100, parseInt(args["approval-rate"] as string, 10) || 70));
 
     const exitCode = await handleRm(files, {
-      dryRun: args["dry-run"],
-      force: args.force,
+      dryRun: args["dry-run"] === true,
+      force: args.force === true,
       approvalRate,
-      recursive: args.recursive,
+      recursive: args.recursive === true,
     });
 
-    Deno.exit(exitCode);
+    process.exitCode = exitCode;
+    return;
   }
 
   console.log(HELP);
-  Deno.exit(1);
+  process.exitCode = 1;
 }
 
 main();
