@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 
+import { readFileSync } from "node:fs";
 import process from "node:process";
 import { parseArgs } from "node:util";
 import { readAuditLog } from "./audit.ts";
 import { parseApprovalRate } from "./args.ts";
 import { handleRm } from "./rm.ts";
 
-const VERSION = "0.1.0";
+const { version: VERSION } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as { version: string };
 
 const HELP = `
 Nigel v${VERSION} — File Deletion Review Board
