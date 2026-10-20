@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import process from "node:process";
 import { appendAudit, readAuditLog } from "../src/audit.ts";
 import { withTempHome } from "./helpers.ts";
@@ -37,4 +39,18 @@ test("withTempHome restores an unset HOME instead of leaking the temp dir", asyn
   } finally {
     if (saved !== undefined) process.env.HOME = saved;
   }
+});
+
+test("appendAudit writes to .nigel/audit.log under the home directory", async () => {
+  await withTempHome(async (home) => {
+    await appendAudit({
+      timestamp: "2026-01-01T00:00:00.000Z",
+      ticketId: "NGL-00002",
+      path: "a.txt",
+      verdict: "DENIED",
+      reason: "No.",
+    });
+    const raw = await readFile(join(home, ".nigel", "audit.log"), "utf8");
+    assert.equal(raw, "[2026-01-01T00:00:00.000Z] NGL-00002 | DENIED | a.txt | No.\n");
+  });
 });

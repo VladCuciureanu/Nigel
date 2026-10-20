@@ -1,14 +1,14 @@
 import { appendFile, mkdir, readFile } from "node:fs/promises";
-import process from "node:process";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { exists } from "./fs.ts";
 
 function getAuditDir(): string {
-  const home = process.env.HOME || process.env.USERPROFILE || ".";
-  return `${home}/.nigel`;
+  return join(homedir(), ".nigel");
 }
 
 function getAuditPath(): string {
-  return `${getAuditDir()}/audit.log`;
+  return join(getAuditDir(), "audit.log");
 }
 
 export interface AuditEntry {
@@ -24,11 +24,7 @@ function formatEntry(entry: AuditEntry): string {
 }
 
 export async function appendAudit(entry: AuditEntry): Promise<void> {
-  const dir = getAuditDir();
-  const { found } = await exists(dir);
-  if (!found) {
-    await mkdir(dir, { recursive: true });
-  }
+  await mkdir(getAuditDir(), { recursive: true });
   const line = formatEntry(entry) + "\n";
   await appendFile(getAuditPath(), line, "utf8");
 }
