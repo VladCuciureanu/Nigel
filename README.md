@@ -1,71 +1,79 @@
 # Nigel
 
-A CLI tool that replaces `rm` with a passive-aggressive bureaucratic approval process.
+`rm`, but every deletion goes through a review board first.
 
-Want to delete a file? Submit a request. It gets "reviewed." You get a decision in 3–5 business seconds.
+Each file gets a ticket, a 3–5 second "review", and a verdict. Approved files are deleted; denied ones stay put. Every decision goes into an audit log.
+
+```console
+$ nigel rm report.txt
+
+  Request NGL-00001 submitted. Review in progress.
+
+  ✓ Running impact assessment...
+  ✓ Checking file retention schedule...
+  ✓ Cross-referencing with department policy...
+  ✓ Assigning reviewer...
+
+  NGL-00001 — ✗ DENIED: Unable to verify chain of custody. Request returned for clarification.
+```
+
+## Requirements
+
+Node.js 26 or newer (see `.nvmrc`). Nigel runs its TypeScript sources directly; there is no build step.
 
 ## Install
 
-Requires [Node.js](https://nodejs.org/) 26 or newer (see `.nvmrc`).
-
 ```sh
 npm install
-
-# Run directly
-node src/main.ts rm file.txt
-
-# Install the `nigel` command globally (symlinked to this checkout)
-npm link
-nigel rm file.txt
+npm link        # puts `nigel` on your PATH, pointing at this checkout
 ```
+
+Without linking, run `node src/main.ts <command>` instead of `nigel`.
 
 ## Usage
 
 ```sh
-# Submit a deletion request
-nigel rm file.txt
-
-# Batch request (sequential review)
-nigel rm file1.txt file2.txt file3.txt
-
-# Delete a directory
-nigel rm -r my-directory/
-
-# Dry run — full review, no actual deletion
-nigel rm --dry-run file.txt
-
-# Skip the review (Nigel will not be happy)
-nigel rm --force file.txt
-
-# Appeal a previous denial
-nigel rm --appeal file.txt
-
-# Custom approval rate
-nigel rm --approval-rate 50 file.txt
-
-# View department status
-nigel status
-
-# View audit log
-nigel audit
+nigel rm <file> [files...]   # submit deletion requests, reviewed one at a time
+nigel status                 # department status board
+nigel audit                  # print the audit log
+nigel --help
+nigel --version
 ```
 
-## Exit Codes
+Options for `rm`:
+
+| Flag | Effect |
+| --- | --- |
+| `-r`, `--recursive` | Allow directories. Without it, a directory is rejected. |
+| `--dry-run` | Run the full review but never delete. Logged as `DRY-RUN`. |
+| `--force` | Skip the review and delete. Logged as `FORCED`. Nigel takes repeat offences personally. |
+| `--approval-rate <0-100>` | Chance of approval, in percent. Default `70`. Out-of-range values are clamped; non-numeric values fall back to `70`. |
+| `--appeal` | Submit the request again. Same as `rm`, and lets you leave out the `rm`: `nigel --appeal file.txt`. |
+
+The review animation is written to stderr; verdicts go to stdout.
+
+### Audit log
+
+Every request is appended to `~/.nigel/audit.log`, one line each:
+
+```
+[2026-10-20T10:08:39.610Z] NGL-00001 | DENIED | report.txt | Unable to verify chain of custody. Request returned for clarification.
+```
+
+Verdicts are `APPROVED`, `DENIED`, `FORCED` and `DRY-RUN`. Ticket numbers continue from the highest one already in the log.
+
+### Exit codes
 
 | Code | Meaning |
-|------|---------|
-| `0`  | All requests approved |
-| `1`  | At least one request denied or file not found |
+| --- | --- |
+| `0` | Every request was approved (or forced) and carried out. |
+| `1` | At least one request was denied, the file was missing, a directory was given without `-r`, or deletion failed. Also returned when no files or no known command are given. |
 
 ## Development
 
 ```sh
-# Run tests
-npm test
-
-# Type-check
-npm run typecheck
-
-# Run in dev mode
-npm run dev
+npm test            # node --test, files in test/*_test.ts
+npm run typecheck   # tsc, no emit
 ```
+
+CI runs both on every push and pull request.
