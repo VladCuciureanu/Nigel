@@ -1,7 +1,7 @@
-import { appendAudit, readAuditRecords, type AuditEntry } from "./audit.ts";
+import { type AuditEntry, appendAudit, readAuditRecords } from "./audit.ts";
 import { exists, safeDelete } from "./fs.ts";
 import { FORCE_ESCALATION_MESSAGES, FORCE_MESSAGES, pickRandom } from "./messages.ts";
-import { runReview, type ReviewResult } from "./review.ts";
+import { type ReviewResult, runReview } from "./review.ts";
 import { lastTicketNumber, ticketSequence } from "./ticket.ts";
 
 export interface RmOptions {
@@ -80,9 +80,8 @@ export async function handleRm(
 
     if (options.force) {
       forceCount++;
-      const msg = forceCount > 1
-        ? pickRandom(FORCE_ESCALATION_MESSAGES)
-        : pickRandom(FORCE_MESSAGES);
+      const msg =
+        forceCount > 1 ? pickRandom(FORCE_ESCALATION_MESSAGES) : pickRandom(FORCE_MESSAGES);
       log(`  ${ticketId} — ${msg}`);
       verdict = "FORCED";
       reason = "Review bypassed via --force";
