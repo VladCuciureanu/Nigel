@@ -12,25 +12,13 @@ export async function exists(path: string): Promise<{ found: boolean; isDirector
   }
 }
 
-export async function deleteFile(path: string): Promise<void> {
-  await rm(path);
-}
-
-export async function deleteDirectory(path: string): Promise<void> {
-  await rm(path, { recursive: true });
-}
-
 export async function safeDelete(
   path: string,
   isDirectory: boolean,
   report: (message: string) => void = console.error,
 ): Promise<boolean> {
   try {
-    if (isDirectory) {
-      await deleteDirectory(path);
-    } else {
-      await deleteFile(path);
-    }
+    await rm(path, { recursive: isDirectory });
     return true;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

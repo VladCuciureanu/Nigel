@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { exists, deleteFile, deleteDirectory, safeDelete } from "../src/fs.ts";
+import { exists, safeDelete } from "../src/fs.ts";
 
 const tmp = tmpdir();
 
@@ -31,21 +31,13 @@ test("exists returns isDirectory true for directories", async () => {
   await rm(path, { recursive: true });
 });
 
-test("deleteFile removes a file", async () => {
-  const path = join(tmp, `nigel-test-del-${Date.now()}.txt`);
-  await writeFile(path, "test");
-  await deleteFile(path);
-  const result = await exists(path);
-  assert.equal(result.found, false);
-});
-
-test("deleteDirectory removes a directory recursively", async () => {
+test("safeDelete removes a directory recursively", async () => {
   const path = join(tmp, `nigel-test-dir-del-${Date.now()}`);
   await mkdir(path);
   await writeFile(join(path, "file.txt"), "test");
-  await deleteDirectory(path);
-  const result = await exists(path);
-  assert.equal(result.found, false);
+  const ok = await safeDelete(path, true, () => {});
+  assert.equal(ok, true);
+  assert.equal((await exists(path)).found, false);
 });
 
 test("safeDelete reports a failing deletion instead of throwing", async () => {
