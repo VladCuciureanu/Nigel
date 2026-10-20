@@ -60,7 +60,16 @@ async function handleRm(
   let exitCode = 0;
 
   for (const file of files) {
-    const { found, isDirectory } = await exists(file);
+    let found: boolean;
+    let isDirectory: boolean;
+    try {
+      ({ found, isDirectory } = await exists(file));
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      console.error(`  ✗ ${file}: cannot access — ${reason}`);
+      exitCode = 1;
+      continue;
+    }
 
     if (!found) {
       console.error(`  ✗ ${file}: file not found — request closed.`);

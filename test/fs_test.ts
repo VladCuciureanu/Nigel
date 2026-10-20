@@ -67,3 +67,10 @@ test("safeDelete removes a file and reports nothing", async () => {
   assert.deepEqual(reports, []);
   assert.equal((await exists(path)).found, false);
 });
+
+test("exists rethrows errors other than ENOENT", async () => {
+  // A NUL byte is rejected by the OS layer on every platform, so stat fails with a non-ENOENT error.
+  await assert.rejects(exists(join(tmp, "nigel\0invalid")), (error: NodeJS.ErrnoException) => {
+    return error.code !== "ENOENT";
+  });
+});

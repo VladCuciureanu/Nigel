@@ -4,8 +4,11 @@ export async function exists(path: string): Promise<{ found: boolean; isDirector
   try {
     const stat = await fsStat(path);
     return { found: true, isDirectory: stat.isDirectory() };
-  } catch {
-    return { found: false, isDirectory: false };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return { found: false, isDirectory: false };
+    }
+    throw error;
   }
 }
 
