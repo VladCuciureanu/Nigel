@@ -160,3 +160,31 @@ for (const rate of ["abc", "50x", "150", "-5"]) {
     });
   });
 }
+
+test("--approval-rate -5 (space form) is one usage line suggesting the = form", async () => {
+  await withTempHome(async (home) => {
+    const file = join(home, "keep.txt");
+    await writeFile(file, "x");
+    const { code, stdout, stderr } = nigel(["rm", "--approval-rate", "-5", file]);
+    assert.equal(code, 1);
+    assert.equal(stdout, "");
+    assert.equal(
+      stderr,
+      "nigel: option '--approval-rate' got '-5', which looks like an option; write --approval-rate=-5\n",
+    );
+    assert.equal(readFileSync(file, "utf8"), "x");
+  });
+});
+
+test("--approval-rate=-value is accepted by the parser and reaches range validation", () => {
+  const { code, stderr } = nigel(["rm", "--approval-rate=-5", "f"]);
+  assert.equal(code, 1);
+  assert.equal(stderr, "nigel: invalid --approval-rate '-5': expected an integer from 0 to 100\n");
+});
+
+test("--approval-rate with no value is a one-line usage error", () => {
+  const { code, stderr } = nigel(["rm", "--approval-rate"]);
+  assert.equal(code, 1);
+  assert.match(stderr, /^nigel: [^\n]+\. Run 'nigel --help' for usage\.\n$/);
+  assert.doesNotMatch(stderr, /\.\./);
+});
