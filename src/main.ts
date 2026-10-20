@@ -120,7 +120,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(HELP);
+  console.error(HELP);
   process.exitCode = 1;
 }
 

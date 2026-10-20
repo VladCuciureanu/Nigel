@@ -43,11 +43,14 @@ test("--help prints usage and exits 0", () => {
   assert.match(stdout, /USAGE:/);
 });
 
-test("an unknown command prints usage and exits 1", () => {
-  const { code, stdout } = nigel(["frobnicate"]);
-  assert.equal(code, 1);
-  assert.match(stdout, /USAGE:/);
-});
+for (const args of [["frobnicate"], []]) {
+  test(`${args.length ? "an unknown" : "no"} command prints usage to stderr and exits 1`, () => {
+    const { code, stdout, stderr } = nigel(args);
+    assert.equal(code, 1);
+    assert.equal(stdout, "");
+    assert.match(stderr, /USAGE:/);
+  });
+}
 
 test("status prints the dashboard", () => {
   const { code, stdout } = nigel(["status"]);
