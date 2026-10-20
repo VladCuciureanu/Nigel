@@ -85,26 +85,47 @@ test("audit reports an empty log, then shows rm --force --dry-run as DRY-RUN", a
   });
 });
 
-for (const flag of ["--dry-run=true", "--dry-run=yes", "--dry-run=1"]) {
-  test(`rm --force ${flag} never deletes`, async () => {
+for (const flag of ["--dry-run=true", "--dry-run=yes", "--dry-run=1", "--dry-run=false"]) {
+  test(`rm --force ${flag} is rejected and never deletes`, async () => {
     await withHome(async (home) => {
       const file = join(home, "keep.txt");
       await writeFile(file, "x");
-      const { code } = nigel(["rm", "--force", flag, file], home);
-      assert.equal(code, 0);
+      const { code, stderr } = nigel(["rm", "--force", flag, file], home);
+      assert.equal(code, 1);
+      assert.match(stderr, /^nigel: Option '--dry-run' does not take an argument/);
       assert.equal(readFileSync(file, "utf8"), "x");
     });
   });
 }
 
-test("rm --force=false does not force", async () => {
-  await withHome(async (home) => {
-    const file = join(home, "keep.txt");
-    await writeFile(file, "x");
-    const { code } = nigel(["rm", "--force=false", "--approval-rate", "0", file], home);
-    assert.equal(code, 1);
-    assert.equal(readFileSync(file, "utf8"), "x");
+for (const flag of ["--dryrun", "--no-dry-run", "--force=false", "-x"]) {
+  test(`unknown or mistyped flag ${flag} is a usage error and deletes nothing`, async () => {
+    await withHome(async (home) => {
+      const file = join(home, "keep.txt");
+      await writeFile(file, "x");
+      const { code, stdout, stderr } = nigel(["rm", flag, "--force", file], home);
+      assert.equal(code, 1);
+      assert.equal(stdout, "");
+      assert.match(stderr, /^nigel: [^\n]+\. Run 'nigel --help' for usage\.\n$/);
+      assert.equal(readFileSync(file, "utf8"), "x");
+    });
   });
+}
+
+test("-rf deletes a directory without review, like rm", async () => {
+  await withHome(async (home) => {
+    const dir = join(home, "dir");
+    await mkdir(dir);
+    await writeFile(join(dir, "f.txt"), "x");
+    const { code } = nigel(["rm", "-rf", dir], home);
+    assert.equal(code, 0);
+    assert.throws(() => readFileSync(join(dir, "f.txt")), { code: "ENOENT" });
+  });
+});
+
+test("-h and -v are short for --help and --version", () => {
+  assert.match(nigel(["-h"]).stdout, /USAGE:/);
+  assert.equal(nigel(["-v"]).stdout.trim(), `nigel v${pkg.version}`);
 });
 
 test("--appeal re-submits files given without the rm command", async () => {
