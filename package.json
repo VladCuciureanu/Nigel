@@ -1,0 +1,22 @@
+{
+  "name": "nigel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "nigel": "./src/main.ts"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "dev": "node src/main.ts",
+    "test": "node --test \"test/**/*_test.ts\"",
+    "typecheck": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
+}

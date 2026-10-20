@@ -1,17 +1,15 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-env
+#!/usr/bin/env node
 
-import { parseArgs } from "jsr:@std/cli/parse-args";
-import { exists, deleteFile, deleteDirectory } from "./fs.ts";
-import { runReview } from "./review.ts";
-import { nextTicketId } from "./ticket.ts";
-import { appendAudit, readAuditLog } from "./audit.ts";
-import {
-  FORCE_MESSAGES,
-  FORCE_ESCALATION_MESSAGES,
-  pickRandom,
-} from "./messages.ts";
+import { readFileSync } from "node:fs";
+import process from "node:process";
+import { parseArgs } from "node:util";
+import { readAuditLog } from "./audit.ts";
+import { dryRunSet, flagSet, parseApprovalRate } from "./args.ts";
+import { handleRm } from "./rm.ts";
 
-const VERSION = "0.1.0";
+const { version: VERSION } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as { version: string };
 
 const HELP = `
 Nigel v${VERSION} — File Deletion Review Board
@@ -44,156 +42,76 @@ const STATUS_DASHBOARD = `
 └─────────────────────────────────────────────┘
 `.trim();
 
-let forceCount = 0;
-
-async function handleRm(
-  files: string[],
-  options: {
-    dryRun: boolean;
-    force: boolean;
-    approvalRate: number;
-    recursive: boolean;
-  },
-): Promise<number> {
-  let exitCode = 0;
-
-  for (const file of files) {
-    const { found, isDirectory } = await exists(file);
-
-    if (!found) {
-      console.error(`  ✗ ${file}: file not found — request closed.`);
-      exitCode = 1;
-      continue;
-    }
-
-    if (isDirectory && !options.recursive) {
-      console.error(`  ✗ ${file}: is a directory. Use -r/--recursive to submit for review.`);
-      exitCode = 1;
-      continue;
-    }
-
-    const ticketId = nextTicketId();
-
-    if (options.force) {
-      forceCount++;
-      const msg = forceCount > 1
-        ? pickRandom(FORCE_ESCALATION_MESSAGES)
-        : pickRandom(FORCE_MESSAGES);
-
-      console.log(`  ${ticketId} — ${msg}`);
-
-      if (!options.dryRun) {
-        if (isDirectory) {
-          await deleteDirectory(file);
-        } else {
-          await deleteFile(file);
-        }
-      }
-
-      await appendAudit({
-        timestamp: new Date().toISOString(),
-        ticketId,
-        path: file,
-        verdict: "FORCED",
-        reason: "Review bypassed via --force",
-      });
-
-      continue;
-    }
-
-    const result = await runReview(ticketId, options.approvalRate, isDirectory);
-
-    if (result.approved) {
-      console.log(`  ${ticketId} — ✓ ${result.message}`);
-
-      if (!options.dryRun) {
-        if (isDirectory) {
-          await deleteDirectory(file);
-        } else {
-          await deleteFile(file);
-        }
-      } else {
-        console.log(`  ${ticketId} — (dry run: file not actually deleted)`);
-      }
-
-      await appendAudit({
-        timestamp: new Date().toISOString(),
-        ticketId,
-        path: file,
-        verdict: "APPROVED",
-        reason: result.message,
-      });
-    } else {
-      console.log(`  ${ticketId} — ✗ DENIED: ${result.message}`);
-      exitCode = 1;
-
-      await appendAudit({
-        timestamp: new Date().toISOString(),
-        ticketId,
-        path: file,
-        verdict: "DENIED",
-        reason: result.message,
-      });
-    }
-  }
-
-  return exitCode;
-}
-
 async function main(): Promise<void> {
-  const args = parseArgs(Deno.args, {
-    boolean: ["help", "version", "dry-run", "force", "appeal", "recursive"],
-    string: ["approval-rate"],
-    alias: { r: "recursive" },
-    default: { "approval-rate": "70" },
+  // Non-strict to match @std/cli parseArgs: unknown flags are ignored, --no-<flag> negates.
+  const { values: args, positionals } = parseArgs({
+    args: process.argv.slice(2),
+    options: {
+      help: { type: "boolean", default: false },
+      version: { type: "boolean", default: false },
+      "dry-run": { type: "boolean", default: false },
+      force: { type: "boolean", default: false },
+      appeal: { type: "boolean", default: false },
+      recursive: { type: "boolean", short: "r", default: false },
+      "approval-rate": { type: "string", default: "70" },
+    },
+    strict: false,
+    allowPositionals: true,
+    allowNegative: true,
   });
 
   if (args.help) {
     console.log(HELP);
-    Deno.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   if (args.version) {
     console.log(`nigel v${VERSION}`);
-    Deno.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
-  const command = args._[0]?.toString();
+  const command = positionals[0];
 
   if (command === "status") {
     console.log(STATUS_DASHBOARD);
-    Deno.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   if (command === "audit") {
     const log = await readAuditLog();
     console.log(log);
-    Deno.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   if (command === "rm" || args.appeal) {
-    const files = args._.slice(command === "rm" ? 1 : 0).map(String);
+    const files = positionals.slice(command === "rm" ? 1 : 0);
 
     if (files.length === 0) {
       console.error("Error: no files specified.");
       console.error("Usage: nigel rm <file> [files...]");
-      Deno.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
-    const approvalRate = Math.max(0, Math.min(100, parseInt(args["approval-rate"] as string, 10) || 70));
+    const approvalRate = parseApprovalRate(args["approval-rate"] as string | undefined);
 
     const exitCode = await handleRm(files, {
-      dryRun: args["dry-run"],
-      force: args.force,
+      dryRun: dryRunSet(args["dry-run"]),
+      force: flagSet(args.force),
       approvalRate,
-      recursive: args.recursive,
+      recursive: flagSet(args.recursive),
     });
 
-    Deno.exit(exitCode);
+    process.exitCode = exitCode;
+    return;
   }
 
   console.log(HELP);
-  Deno.exit(1);
+  process.exitCode = 1;
 }
 
 main();

@@ -1,19 +1,20 @@
-import { exists } from "./fs.ts";
+import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 function getAuditDir(): string {
-  const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || ".";
-  return `${home}/.nigel`;
+  return join(homedir(), ".nigel");
 }
 
 function getAuditPath(): string {
-  return `${getAuditDir()}/audit.log`;
+  return join(getAuditDir(), "audit.log");
 }
 
 export interface AuditEntry {
   timestamp: string;
   ticketId: string;
   path: string;
-  verdict: "APPROVED" | "DENIED" | "FORCED";
+  verdict: "APPROVED" | "DENIED" | "FORCED" | "DRY-RUN";
   reason: string;
 }
 
@@ -22,20 +23,22 @@ function formatEntry(entry: AuditEntry): string {
 }
 
 export async function appendAudit(entry: AuditEntry): Promise<void> {
-  const dir = getAuditDir();
-  const { found } = await exists(dir);
-  if (!found) {
-    await Deno.mkdir(dir, { recursive: true });
-  }
+  await mkdir(getAuditDir(), { recursive: true });
   const line = formatEntry(entry) + "\n";
-  await Deno.writeTextFile(getAuditPath(), line, { append: true });
+  await appendFile(getAuditPath(), line, "utf8");
+}
+
+/** Raw audit log contents, or "" when nothing has been logged yet. */
+export async function readAuditRecords(): Promise<string> {
+  try {
+    return await readFile(getAuditPath(), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return "";
+    throw error;
+  }
 }
 
 export async function readAuditLog(): Promise<string> {
-  const path = getAuditPath();
-  const { found } = await exists(path);
-  if (!found) {
-    return "No audit records found.";
-  }
-  return await Deno.readTextFile(path);
+  const records = await readAuditRecords();
+  return records === "" ? "No audit records found." : records;
 }

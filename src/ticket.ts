@@ -1,10 +1,21 @@
-let counter = 0;
+const PREFIX = "NGL-";
+const LOGGED_ID = /^\[[^\]]*\] NGL-(\d+) \|/gm;
 
-export function nextTicketId(): string {
-  counter++;
-  return `NGL-${String(counter).padStart(5, "0")}`;
+function formatTicketId(n: number): string {
+  return `${PREFIX}${String(n).padStart(5, "0")}`;
 }
 
-export function resetCounter(): void {
-  counter = 0;
+/** Highest ticket number recorded in the audit log text, or 0 if there is none. */
+export function lastTicketNumber(auditLog: string): number {
+  let last = 0;
+  for (const match of auditLog.matchAll(LOGGED_ID)) {
+    last = Math.max(last, Number(match[1]));
+  }
+  return last;
+}
+
+/** Returns a generator of ticket IDs numbered after `last`. */
+export function ticketSequence(last: number): () => string {
+  let counter = last;
+  return () => formatTicketId(++counter);
 }

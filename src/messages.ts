@@ -54,11 +54,18 @@ export const RECURSIVE_STATUSES: string[] = [
   "Calculating total affected file count...",
 ];
 
-export function pickRandom<T>(pool: T[]): T {
-  return pool[Math.floor(Math.random() * pool.length)];
+export type Rng = () => number;
+
+export function pickRandom<T>(pool: T[], rng: Rng = Math.random): T {
+  return pool[Math.floor(rng() * pool.length)];
 }
 
-export function pickMultiple<T>(pool: T[], count: number): T[] {
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+export function pickMultiple<T>(pool: T[], count: number, rng: Rng = Math.random): T[] {
+  // Fisher-Yates: every permutation is equally likely, unlike sorting with a random comparator.
+  const shuffled = [...pool];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
   return shuffled.slice(0, Math.min(count, shuffled.length));
 }

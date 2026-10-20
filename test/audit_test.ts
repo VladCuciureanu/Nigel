@@ -1,14 +1,13 @@
-import { assertEquals } from "jsr:@std/assert";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import process from "node:process";
 import { appendAudit, readAuditLog } from "../src/audit.ts";
+import { withTempHome } from "./helpers.ts";
 
-Deno.test("appendAudit and readAuditLog round-trip", async () => {
-  // Use a temp HOME to avoid polluting real audit log
-  const tmpHome = `/tmp/nigel-audit-test-${Date.now()}`;
-  await Deno.mkdir(tmpHome);
-  const originalHome = Deno.env.get("HOME");
-  Deno.env.set("HOME", tmpHome);
-
-  try {
+test("appendAudit and readAuditLog round-trip", async () => {
+  await withTempHome(async () => {
     await appendAudit({
       timestamp: "2026-01-01T00:00:00.000Z",
       ticketId: "NGL-00001",
@@ -18,30 +17,40 @@ Deno.test("appendAudit and readAuditLog round-trip", async () => {
     });
 
     const log = await readAuditLog();
-    assertEquals(log.includes("NGL-00001"), true);
-    assertEquals(log.includes("APPROVED"), true);
-    assertEquals(log.includes("/tmp/test.txt"), true);
+    assert.equal(log.includes("NGL-00001"), true);
+    assert.equal(log.includes("APPROVED"), true);
+    assert.equal(log.includes("/tmp/test.txt"), true);
+  });
+});
+
+test("readAuditLog returns message when no log exists", async () => {
+  await withTempHome(async () => {
+    const log = await readAuditLog();
+    assert.equal(log, "No audit records found.");
+  });
+});
+
+test("withTempHome restores an unset HOME instead of leaking the temp dir", async () => {
+  const saved = process.env.HOME;
+  delete process.env.HOME;
+  try {
+    await withTempHome(async () => {});
+    assert.equal(process.env.HOME, undefined);
   } finally {
-    if (originalHome) {
-      Deno.env.set("HOME", originalHome);
-    }
-    await Deno.remove(tmpHome, { recursive: true });
+    if (saved !== undefined) process.env.HOME = saved;
   }
 });
 
-Deno.test("readAuditLog returns message when no log exists", async () => {
-  const tmpHome = `/tmp/nigel-audit-test-empty-${Date.now()}`;
-  await Deno.mkdir(tmpHome);
-  const originalHome = Deno.env.get("HOME");
-  Deno.env.set("HOME", tmpHome);
-
-  try {
-    const log = await readAuditLog();
-    assertEquals(log, "No audit records found.");
-  } finally {
-    if (originalHome) {
-      Deno.env.set("HOME", originalHome);
-    }
-    await Deno.remove(tmpHome, { recursive: true });
-  }
+test("appendAudit writes to .nigel/audit.log under the home directory", async () => {
+  await withTempHome(async (home) => {
+    await appendAudit({
+      timestamp: "2026-01-01T00:00:00.000Z",
+      ticketId: "NGL-00002",
+      path: "a.txt",
+      verdict: "DENIED",
+      reason: "No.",
+    });
+    const raw = await readFile(join(home, ".nigel", "audit.log"), "utf8");
+    assert.equal(raw, "[2026-01-01T00:00:00.000Z] NGL-00002 | DENIED | a.txt | No.\n");
+  });
 });

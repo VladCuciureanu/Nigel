@@ -6,15 +6,17 @@ Want to delete a file? Submit a request. It gets "reviewed." You get a decision 
 
 ## Install
 
-Requires [Deno](https://deno.com/).
+Requires [Node.js](https://nodejs.org/) 24 or newer (see `.nvmrc`).
 
 ```sh
-# Run directly
-deno run --allow-read --allow-write --allow-env src/main.ts rm file.txt
+npm install
 
-# Compile to standalone binary
-deno task compile
-./nigel rm file.txt
+# Run directly
+node src/main.ts rm file.txt
+
+# Install the `nigel` command globally (symlinked to this checkout)
+npm link
+nigel rm file.txt
 ```
 
 ## Usage
@@ -59,8 +61,11 @@ nigel audit
 
 ```sh
 # Run tests
-deno task test
+npm test
+
+# Type-check
+npm run typecheck
 
 # Run in dev mode
-deno task dev
+npm run dev
 ```
