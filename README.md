@@ -52,7 +52,7 @@ Options for `rm`:
 
 Short flags combine like `rm`'s: `nigel rm -rf build/` is `--recursive --force`. Flags take no value (`--dry-run=yes` is an error), and unknown or mistyped flags such as `--dryrun` are rejected with a one-line `nigel: ...` error on stderr before anything is reviewed or deleted.
 
-The review animation is written to stderr; verdicts go to stdout.
+The review progress is written to stderr, as a spinner on a terminal and as one line per step when stderr is redirected; verdicts go to stdout.
 
 ### Audit log
 

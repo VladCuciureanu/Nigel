@@ -23,6 +23,8 @@ export interface ReviewDeps {
   rng?: Rng;
   sleep?: (ms: number) => Promise<void>;
   write?: (text: string) => void;
+  /** Animate the spinner; defaults to whether stderr is a TTY. Otherwise each status is one line. */
+  interactive?: boolean;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -38,7 +40,15 @@ async function showSpinner(
   durationMs: number,
   wait: (ms: number) => Promise<void>,
   write: (text: string) => void,
+  interactive: boolean,
 ): Promise<void> {
+  if (!interactive) {
+    await wait(durationMs);
+    write(`  ✓ ${text}
+`);
+    return;
+  }
+
   let frame = 0;
   const steps = Math.floor(durationMs / SPINNER_INTERVAL_MS);
 
@@ -60,6 +70,7 @@ export async function runReview(
   const rng = deps.rng ?? Math.random;
   const wait = deps.sleep ?? sleep;
   const write = deps.write ?? writeStderr;
+  const interactive = deps.interactive ?? process.stderr.isTTY === true;
 
   const baseStatuses = pickMultiple(REVIEW_STATUSES, 3 + Math.floor(rng() * 2), rng);
   const statuses = recursive
@@ -72,7 +83,7 @@ export async function runReview(
   write(`\n  Request ${ticketId} submitted. Review in progress.\n\n`);
 
   for (const status of statuses) {
-    await showSpinner(status, stepDuration, wait, write);
+    await showSpinner(status, stepDuration, wait, write, interactive);
   }
 
   write("\n");
