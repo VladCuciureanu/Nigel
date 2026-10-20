@@ -37,7 +37,7 @@ nigel rm <file> [files...]   # submit deletion requests, reviewed one at a time
 nigel status                 # department status board
 nigel audit                  # print the audit log
 nigel -h, --help
-nigel -v, --version
+nigel --version
 ```
 
 Options for `rm`:
@@ -84,3 +84,7 @@ npm run build       # compile src/ to dist/
 ```
 
 CI runs `npm run check` and `npm run build` on pushes to main and on pull requests.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

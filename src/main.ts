@@ -26,7 +26,7 @@ OPTIONS:
   --approval-rate <0-100>      Approval probability in percent (default: ${DEFAULT_APPROVAL_RATE})
   -r, --recursive              Required for directories
   -h, --help                   Show this help
-  -v, --version                Show version
+  --version                    Show version
 `.trim();
 
 const STATUS_DASHBOARD = `
@@ -44,7 +44,7 @@ const STATUS_DASHBOARD = `
 
 const OPTIONS = {
   help: { type: "boolean", short: "h", default: false },
-  version: { type: "boolean", short: "v", default: false },
+  version: { type: "boolean", default: false },
   "dry-run": { type: "boolean", default: false },
   force: { type: "boolean", short: "f", default: false },
   appeal: { type: "boolean", default: false },
