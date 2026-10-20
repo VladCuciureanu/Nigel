@@ -12,7 +12,7 @@
   "scripts": {
     "start": "node src/main.ts",
     "dev": "node src/main.ts",
-    "test": "node --test \"test/**/*_test.ts\"",
+    "test": "node --test \"test/**/*.test.ts\"",
     "typecheck": "tsc"
   },
   "devDependencies": {
