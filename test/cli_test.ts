@@ -86,6 +86,28 @@ test("audit reports an empty log, then shows rm --force --dry-run as DRY-RUN", a
   });
 });
 
+for (const flag of ["--dry-run=true", "--dry-run=yes", "--dry-run=1"]) {
+  test(`rm --force ${flag} never deletes`, async () => {
+    await withHome(async (home) => {
+      const file = join(home, "keep.txt");
+      await writeFile(file, "x");
+      const { code } = nigel(["rm", "--force", flag, file], home);
+      assert.equal(code, 0);
+      assert.equal(readFileSync(file, "utf8"), "x");
+    });
+  });
+}
+
+test("rm --force=false does not force", async () => {
+  await withHome(async (home) => {
+    const file = join(home, "keep.txt");
+    await writeFile(file, "x");
+    const { code } = nigel(["rm", "--force=false", "--approval-rate", "0", file], home);
+    assert.equal(code, 1);
+    assert.equal(readFileSync(file, "utf8"), "x");
+  });
+});
+
 test("--appeal re-submits files given without the rm command", async () => {
   await withHome(async (home) => {
     const file = join(home, "gone.txt");

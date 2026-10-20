@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import process from "node:process";
 import { parseArgs } from "node:util";
 import { readAuditLog } from "./audit.ts";
-import { parseApprovalRate } from "./args.ts";
+import { dryRunSet, flagSet, parseApprovalRate } from "./args.ts";
 import { handleRm } from "./rm.ts";
 
 const { version: VERSION } = JSON.parse(
@@ -100,10 +100,10 @@ async function main(): Promise<void> {
     const approvalRate = parseApprovalRate(args["approval-rate"] as string | undefined);
 
     const exitCode = await handleRm(files, {
-      dryRun: args["dry-run"] === true,
-      force: args.force === true,
+      dryRun: dryRunSet(args["dry-run"]),
+      force: flagSet(args.force),
       approvalRate,
-      recursive: args.recursive === true,
+      recursive: flagSet(args.recursive),
     });
 
     process.exitCode = exitCode;
