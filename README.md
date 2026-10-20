@@ -84,3 +84,7 @@ npm run build       # compile src/ to dist/
 ```
 
 CI runs `npm run check` and `npm run build` on pushes to main and on pull requests.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
