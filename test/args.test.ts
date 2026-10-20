@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { dryRunSet, flagSet, parseApprovalRate } from "../src/args.ts";
 
 test("parseApprovalRate honors 0", () => {
@@ -19,7 +19,7 @@ test("parseApprovalRate clamps to 0-100", () => {
   assert.equal(parseApprovalRate("-5"), 0);
 });
 
-test("flagSet only accepts true or \"true\"", () => {
+test('flagSet only accepts true or "true"', () => {
   assert.equal(flagSet(true), true);
   assert.equal(flagSet("true"), true);
   assert.equal(flagSet("false"), false);
@@ -28,7 +28,7 @@ test("flagSet only accepts true or \"true\"", () => {
   assert.equal(flagSet(false), false);
 });
 
-test("dryRunSet keeps dry run on for any explicit value except \"false\"", () => {
+test('dryRunSet keeps dry run on for any explicit value except "false"', () => {
   assert.equal(dryRunSet(true), true);
   assert.equal(dryRunSet("true"), true);
   assert.equal(dryRunSet("1"), true);

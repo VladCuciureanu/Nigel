@@ -1,4 +1,4 @@
-import { rm, stat as fsStat } from "node:fs/promises";
+import { stat as fsStat, rm } from "node:fs/promises";
 
 export async function exists(path: string): Promise<{ found: boolean; isDirectory: boolean }> {
   try {

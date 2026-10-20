@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { lastTicketNumber, ticketSequence } from "../src/ticket.ts";
 
 test("ticketSequence generates sequential IDs after the given number", () => {

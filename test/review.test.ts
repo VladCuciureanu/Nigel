@@ -1,7 +1,7 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { APPROVAL_MESSAGES, DENIAL_REASONS, RECURSIVE_STATUSES } from "../src/messages.ts";
-import { runReview, type ReviewDeps } from "../src/review.ts";
+import { type ReviewDeps, runReview } from "../src/review.ts";
 import { seededRng } from "./rng.ts";
 
 function fakeDeps(rng = seededRng(1)): ReviewDeps & { output: string[]; slept: number[] } {
@@ -35,8 +35,28 @@ test("runReview with 0% approval rate always denies", async () => {
 });
 
 test("runReview approves when the roll is under the approval rate", async () => {
-  assert.equal((await runReview("NGL-TEST", 50, false, fakeDeps(() => 0.49))).approved, true);
-  assert.equal((await runReview("NGL-TEST", 50, false, fakeDeps(() => 0.5))).approved, false);
+  assert.equal(
+    (
+      await runReview(
+        "NGL-TEST",
+        50,
+        false,
+        fakeDeps(() => 0.49),
+      )
+    ).approved,
+    true,
+  );
+  assert.equal(
+    (
+      await runReview(
+        "NGL-TEST",
+        50,
+        false,
+        fakeDeps(() => 0.5),
+      )
+    ).approved,
+    false,
+  );
 });
 
 test("runReview spends 3-5 simulated seconds on the injected clock", async () => {

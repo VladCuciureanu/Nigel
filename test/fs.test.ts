@@ -1,14 +1,14 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { test } from "node:test";
 import { exists, safeDelete } from "../src/fs.ts";
 
 const tmp = tmpdir();
 
 test("exists returns false for non-existent path", async () => {
-  const result = await exists(join(tmp, "nigel-test-nonexistent-" + Date.now()));
+  const result = await exists(join(tmp, `nigel-test-nonexistent-${Date.now()}`));
   assert.equal(result.found, false);
   assert.equal(result.isDirectory, false);
 });

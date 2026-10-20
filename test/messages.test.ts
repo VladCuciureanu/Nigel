@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import {
   APPROVAL_MESSAGES,
   DENIAL_REASONS,
@@ -55,11 +55,20 @@ test("pickMultiple shuffles without bias", () => {
   }
   for (const item of pool) {
     const share = (firsts.get(item) ?? 0) / trials;
-    assert.ok(Math.abs(share - 0.2) < 0.03, `${item} came first ${(share * 100).toFixed(1)}% of the time`);
+    assert.ok(
+      Math.abs(share - 0.2) < 0.03,
+      `${item} came first ${(share * 100).toFixed(1)}% of the time`,
+    );
   }
 });
 
 test("pickRandom uses the injected rng", () => {
-  assert.equal(pickRandom(["a", "b", "c"], () => 0.99), "c");
-  assert.equal(pickRandom(["a", "b", "c"], () => 0), "a");
+  assert.equal(
+    pickRandom(["a", "b", "c"], () => 0.99),
+    "c",
+  );
+  assert.equal(
+    pickRandom(["a", "b", "c"], () => 0),
+    "a",
+  );
 });

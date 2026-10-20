@@ -81,8 +81,6 @@ export async function runReview(
 
   return {
     approved,
-    message: approved
-      ? pickRandom(APPROVAL_MESSAGES, rng)
-      : pickRandom(DENIAL_REASONS, rng),
+    message: approved ? pickRandom(APPROVAL_MESSAGES, rng) : pickRandom(DENIAL_REASONS, rng),
   };
 }

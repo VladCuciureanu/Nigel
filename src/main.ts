@@ -3,8 +3,8 @@
 import { readFileSync } from "node:fs";
 import process from "node:process";
 import { parseArgs } from "node:util";
-import { readAuditLog } from "./audit.ts";
 import { dryRunSet, flagSet, parseApprovalRate } from "./args.ts";
+import { readAuditLog } from "./audit.ts";
 import { handleRm } from "./rm.ts";
 
 const { version: VERSION } = JSON.parse(
