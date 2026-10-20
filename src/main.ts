@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import process from "node:process";
 import { parseArgs } from "node:util";
 import { DEFAULT_APPROVAL_RATE, parseApprovalRate } from "./args.ts";
-import { readAuditLog } from "./audit.ts";
+import { readAuditRecords } from "./audit.ts";
 import { handleRm } from "./rm.ts";
 
 const { version: VERSION } = JSON.parse(
@@ -91,8 +91,8 @@ async function main(): Promise<void> {
   }
 
   if (command === "audit") {
-    const log = await readAuditLog();
-    console.log(log);
+    const records = await readAuditRecords();
+    console.log(records === "" ? "No audit records found." : records);
     process.exitCode = 0;
     return;
   }

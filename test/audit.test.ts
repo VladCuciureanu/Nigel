@@ -3,10 +3,10 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import process from "node:process";
 import { test } from "node:test";
-import { appendAudit, readAuditLog } from "../src/audit.ts";
+import { appendAudit, readAuditRecords } from "../src/audit.ts";
 import { withTempHome } from "./helpers.ts";
 
-test("appendAudit and readAuditLog round-trip", async () => {
+test("appendAudit and readAuditRecords round-trip", async () => {
   await withTempHome(async () => {
     await appendAudit({
       timestamp: "2026-01-01T00:00:00.000Z",
@@ -16,17 +16,16 @@ test("appendAudit and readAuditLog round-trip", async () => {
       reason: "Deletion approved.",
     });
 
-    const log = await readAuditLog();
+    const log = await readAuditRecords();
     assert.equal(log.includes("NGL-00001"), true);
     assert.equal(log.includes("APPROVED"), true);
     assert.equal(log.includes("/tmp/test.txt"), true);
   });
 });
 
-test("readAuditLog returns message when no log exists", async () => {
+test("readAuditRecords returns an empty string when no log exists", async () => {
   await withTempHome(async () => {
-    const log = await readAuditLog();
-    assert.equal(log, "No audit records found.");
+    assert.equal(await readAuditRecords(), "");
   });
 });
 

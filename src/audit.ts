@@ -40,8 +40,3 @@ export async function readAuditRecords(): Promise<string> {
     throw error;
   }
 }
-
-export async function readAuditLog(): Promise<string> {
-  const records = await readAuditRecords();
-  return records === "" ? "No audit records found." : records;
-}
