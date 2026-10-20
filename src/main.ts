@@ -42,26 +42,49 @@ const STATUS_DASHBOARD = `
 └─────────────────────────────────────────────┘
 `.trim();
 
+const OPTIONS = {
+  help: { type: "boolean", short: "h", default: false },
+  version: { type: "boolean", short: "v", default: false },
+  "dry-run": { type: "boolean", default: false },
+  force: { type: "boolean", short: "f", default: false },
+  appeal: { type: "boolean", default: false },
+  recursive: { type: "boolean", short: "r", default: false },
+  "approval-rate": { type: "string" },
+} as const;
+
+/**
+ * Explains `--opt -value`: parseArgs refuses a string option's value that starts with a dash,
+ * so name the option and value from argv and suggest the `--opt=-value` form.
+ */
+function ambiguousValueMessage(args: string[]): string | undefined {
+  const { tokens } = parseArgs({ args, options: OPTIONS, strict: false, tokens: true });
+  for (const token of tokens) {
+    // Without strict mode parseArgs takes the dash-led next argument as the value.
+    if (token.kind !== "option" || token.inlineValue !== false) continue;
+    const { value } = token;
+    // A long flag in the value slot means the value was left out, not that it starts with a dash.
+    if (value?.startsWith("--")) return `option '${token.rawName}' needs a value`;
+    if (value?.startsWith("-")) {
+      return `option '${token.rawName}' got '${value}', which looks like an option; write --${token.name}=${value}`;
+    }
+  }
+  return undefined;
+}
+
 function parseCommandLine(args: string[]) {
   try {
-    return parseArgs({
-      args,
-      options: {
-        help: { type: "boolean", short: "h", default: false },
-        version: { type: "boolean", short: "v", default: false },
-        "dry-run": { type: "boolean", default: false },
-        force: { type: "boolean", short: "f", default: false },
-        appeal: { type: "boolean", default: false },
-        recursive: { type: "boolean", short: "r", default: false },
-        "approval-rate": { type: "string" },
-      },
-      allowPositionals: true,
-    });
+    return parseArgs({ args, options: OPTIONS, allowPositionals: true });
   } catch (error) {
-    // parseArgs messages run on with advice about `--`; keep the first sentence.
-    if ((error as NodeJS.ErrnoException).code?.startsWith("ERR_PARSE_ARGS_")) {
-      const [summary] = (error as Error).message.split(". ");
-      throw new Error(`${summary}. Run 'nigel --help' for usage.`);
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ERR_PARSE_ARGS_INVALID_OPTION_VALUE") {
+      const message = ambiguousValueMessage(args);
+      if (message !== undefined) throw new Error(message);
+    }
+    // parseArgs messages run on over several lines with advice about `--`; keep the first sentence.
+    if (code?.startsWith("ERR_PARSE_ARGS_")) {
+      const [firstLine = ""] = (error as Error).message.split("\n");
+      const [summary = ""] = firstLine.split(". ");
+      throw new Error(`${summary.trim().replace(/\.+$/, "")}. Run 'nigel --help' for usage.`);
     }
     throw error;
   }
