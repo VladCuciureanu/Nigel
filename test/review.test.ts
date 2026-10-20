@@ -73,3 +73,21 @@ test("runReview adds recursive statuses for directories", async () => {
   const text = deps.output.join("");
   assert.ok(RECURSIVE_STATUSES.some((status) => text.includes(status)));
 });
+
+test("runReview prints one plain line per status when stderr is not a TTY", async () => {
+  const deps = { ...fakeDeps(), interactive: false };
+  await runReview("NGL-TEST", 100, false, deps);
+  const text = deps.output.join("");
+  assert.ok(!text.includes("\r"), "no carriage returns");
+  const statuses = text.split("\n").filter((line) => line.startsWith("  ✓ "));
+  assert.ok(statuses.length >= 3);
+  assert.equal(deps.output.length, statuses.length + 2); // header, statuses, trailing blank line
+  const total = deps.slept.reduce((sum, ms) => sum + ms, 0);
+  assert.ok(total >= 3000 && total <= 5000, `slept ${total}ms`);
+});
+
+test("runReview animates the spinner when stderr is a TTY", async () => {
+  const deps = { ...fakeDeps(), interactive: true };
+  await runReview("NGL-TEST", 100, false, deps);
+  assert.ok(deps.output.filter((text) => text.startsWith("\r  ⠋ ")).length >= 3);
+});

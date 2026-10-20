@@ -1,38 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { dryRunSet, flagSet, parseApprovalRate } from "../src/args.ts";
+import { DEFAULT_APPROVAL_RATE, parseApprovalRate } from "../src/args.ts";
 
-test("parseApprovalRate honors 0", () => {
+test("parseApprovalRate accepts integers from 0 to 100", () => {
   assert.equal(parseApprovalRate("0"), 0);
+  assert.equal(parseApprovalRate("55"), 55);
+  assert.equal(parseApprovalRate("100"), 100);
 });
 
-test("parseApprovalRate defaults to 70 when absent", () => {
-  assert.equal(parseApprovalRate(undefined), 70);
+test("parseApprovalRate defaults when absent", () => {
+  assert.equal(parseApprovalRate(undefined), DEFAULT_APPROVAL_RATE);
 });
 
-test("parseApprovalRate defaults to 70 when not a number", () => {
-  assert.equal(parseApprovalRate("abc"), 70);
-});
-
-test("parseApprovalRate clamps to 0-100", () => {
-  assert.equal(parseApprovalRate("150"), 100);
-  assert.equal(parseApprovalRate("-5"), 0);
-});
-
-test('flagSet only accepts true or "true"', () => {
-  assert.equal(flagSet(true), true);
-  assert.equal(flagSet("true"), true);
-  assert.equal(flagSet("false"), false);
-  assert.equal(flagSet("yes"), false);
-  assert.equal(flagSet(undefined), false);
-  assert.equal(flagSet(false), false);
-});
-
-test('dryRunSet keeps dry run on for any explicit value except "false"', () => {
-  assert.equal(dryRunSet(true), true);
-  assert.equal(dryRunSet("true"), true);
-  assert.equal(dryRunSet("1"), true);
-  assert.equal(dryRunSet("false"), false);
-  assert.equal(dryRunSet(false), false);
-  assert.equal(dryRunSet(undefined), false);
-});
+for (const raw of ["abc", "50x", "", " 50", "1.5", "1e2", "-5", "101", "150"]) {
+  test(`parseApprovalRate rejects ${JSON.stringify(raw)}`, () => {
+    assert.throws(() => parseApprovalRate(raw), {
+      message: `invalid --approval-rate '${raw}': expected an integer from 0 to 100`,
+    });
+  });
+}

@@ -1,6 +1,12 @@
 import { stat as fsStat, rm } from "node:fs/promises";
 
-export async function exists(path: string): Promise<{ found: boolean; isDirectory: boolean }> {
+export interface PathInfo {
+  found: boolean;
+  isDirectory: boolean;
+}
+
+/** Stats `path`, reporting a missing path as not found instead of throwing. */
+export async function statPath(path: string): Promise<PathInfo> {
   try {
     const stat = await fsStat(path);
     return { found: true, isDirectory: stat.isDirectory() };

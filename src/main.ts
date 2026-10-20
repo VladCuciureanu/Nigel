@@ -3,8 +3,8 @@
 import { readFileSync } from "node:fs";
 import process from "node:process";
 import { parseArgs } from "node:util";
-import { dryRunSet, flagSet, parseApprovalRate } from "./args.ts";
-import { readAuditLog } from "./audit.ts";
+import { DEFAULT_APPROVAL_RATE, parseApprovalRate } from "./args.ts";
+import { readAuditRecords } from "./audit.ts";
 import { handleRm } from "./rm.ts";
 
 const { version: VERSION } = JSON.parse(
@@ -21,12 +21,12 @@ USAGE:
 
 OPTIONS:
   --dry-run                    Run review but never actually delete
-  --force                      Skip review (escalated)
+  -f, --force                  Skip review (escalated)
   --appeal                     Re-submit a request (same as rm)
-  --approval-rate <0-100>      Override approval probability (default: 70)
+  --approval-rate <0-100>      Approval probability in percent (default: ${DEFAULT_APPROVAL_RATE})
   -r, --recursive              Required for directories
-  --help                       Show this help
-  --version                    Show version
+  -h, --help                   Show this help
+  -v, --version                Show version
 `.trim();
 
 const STATUS_DASHBOARD = `
@@ -42,23 +42,33 @@ const STATUS_DASHBOARD = `
 └─────────────────────────────────────────────┘
 `.trim();
 
+function parseCommandLine(args: string[]) {
+  try {
+    return parseArgs({
+      args,
+      options: {
+        help: { type: "boolean", short: "h", default: false },
+        version: { type: "boolean", short: "v", default: false },
+        "dry-run": { type: "boolean", default: false },
+        force: { type: "boolean", short: "f", default: false },
+        appeal: { type: "boolean", default: false },
+        recursive: { type: "boolean", short: "r", default: false },
+        "approval-rate": { type: "string" },
+      },
+      allowPositionals: true,
+    });
+  } catch (error) {
+    // parseArgs messages run on with advice about `--`; keep the first sentence.
+    if ((error as NodeJS.ErrnoException).code?.startsWith("ERR_PARSE_ARGS_")) {
+      const [summary] = (error as Error).message.split(". ");
+      throw new Error(`${summary}. Run 'nigel --help' for usage.`);
+    }
+    throw error;
+  }
+}
+
 async function main(): Promise<void> {
-  // Non-strict to match @std/cli parseArgs: unknown flags are ignored, --no-<flag> negates.
-  const { values: args, positionals } = parseArgs({
-    args: process.argv.slice(2),
-    options: {
-      help: { type: "boolean", default: false },
-      version: { type: "boolean", default: false },
-      "dry-run": { type: "boolean", default: false },
-      force: { type: "boolean", default: false },
-      appeal: { type: "boolean", default: false },
-      recursive: { type: "boolean", short: "r", default: false },
-      "approval-rate": { type: "string", default: "70" },
-    },
-    strict: false,
-    allowPositionals: true,
-    allowNegative: true,
-  });
+  const { values: args, positionals } = parseCommandLine(process.argv.slice(2));
 
   if (args.help) {
     console.log(HELP);
@@ -81,8 +91,8 @@ async function main(): Promise<void> {
   }
 
   if (command === "audit") {
-    const log = await readAuditLog();
-    console.log(log);
+    const records = await readAuditRecords();
+    console.log(records === "" ? "No audit records found." : records);
     process.exitCode = 0;
     return;
   }
@@ -97,21 +107,24 @@ async function main(): Promise<void> {
       return;
     }
 
-    const approvalRate = parseApprovalRate(args["approval-rate"] as string | undefined);
+    const approvalRate = parseApprovalRate(args["approval-rate"]);
 
     const exitCode = await handleRm(files, {
-      dryRun: dryRunSet(args["dry-run"]),
-      force: flagSet(args.force),
+      dryRun: args["dry-run"],
+      force: args.force,
       approvalRate,
-      recursive: flagSet(args.recursive),
+      recursive: args.recursive,
     });
 
     process.exitCode = exitCode;
     return;
   }
 
-  console.log(HELP);
+  console.error(HELP);
   process.exitCode = 1;
 }
 
-main();
+main().catch((error: unknown) => {
+  console.error(`nigel: ${error instanceof Error ? error.message : String(error)}`);
+  process.exitCode = 1;
+});

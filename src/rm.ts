@@ -1,5 +1,5 @@
 import { type AuditEntry, appendAudit, readAuditRecords } from "./audit.ts";
-import { exists, safeDelete } from "./fs.ts";
+import { type PathInfo, safeDelete, statPath } from "./fs.ts";
 import { FORCE_ESCALATION_MESSAGES, FORCE_MESSAGES, pickRandom } from "./messages.ts";
 import { type ReviewResult, runReview } from "./review.ts";
 import { lastTicketNumber, ticketSequence } from "./ticket.ts";
@@ -14,17 +14,32 @@ export interface RmOptions {
 /** Collaborators of handleRm, injectable for tests. */
 export interface RmDeps {
   review?: (ticketId: string, approvalRate: number, recursive: boolean) => Promise<ReviewResult>;
-  log?: (message: string) => void;
-  error?: (message: string) => void;
 }
 
-async function audit(
-  ticketId: string,
-  path: string,
-  verdict: AuditEntry["verdict"],
-  reason: string,
-): Promise<void> {
-  await appendAudit({ timestamp: new Date().toISOString(), ticketId, path, verdict, reason });
+/**
+ * Checks that `file` can be submitted for review and returns whether it is a directory.
+ * Returns undefined, after reporting why, when the file is missing, unreadable, or a
+ * directory without `recursive`.
+ */
+async function checkTarget(file: string, recursive: boolean): Promise<boolean | undefined> {
+  let target: PathInfo;
+  try {
+    target = await statPath(file);
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    console.error(`  ✗ ${file}: cannot access — ${reason}`);
+    return undefined;
+  }
+
+  if (!target.found) {
+    console.error(`  ✗ ${file}: file not found — request closed.`);
+    return undefined;
+  }
+  if (target.isDirectory && !recursive) {
+    console.error(`  ✗ ${file}: is a directory. Use -r/--recursive to submit for review.`);
+    return undefined;
+  }
+  return target.isDirectory;
 }
 
 export async function handleRm(
@@ -33,16 +48,14 @@ export async function handleRm(
   deps: RmDeps = {},
 ): Promise<number> {
   const review = deps.review ?? runReview;
-  const log = deps.log ?? console.log;
-  const error = deps.error ?? console.error;
 
   // Deletes the file, or only announces it on a dry run; reports failures and returns false.
   const remove = async (ticketId: string, file: string, isDirectory: boolean): Promise<boolean> => {
     if (options.dryRun) {
-      log(`  ${ticketId} — (dry run: file not actually deleted)`);
+      console.log(`  ${ticketId} — (dry run: file not actually deleted)`);
       return true;
     }
-    return await safeDelete(file, isDirectory, error);
+    return await safeDelete(file, isDirectory);
   };
 
   // Continue numbering from the audit log so IDs stay unique across runs.
@@ -51,25 +64,8 @@ export async function handleRm(
   let forceCount = 0;
 
   for (const file of files) {
-    let found: boolean;
-    let isDirectory: boolean;
-    try {
-      ({ found, isDirectory } = await exists(file));
-    } catch (cause) {
-      const reason = cause instanceof Error ? cause.message : String(cause);
-      error(`  ✗ ${file}: cannot access — ${reason}`);
-      exitCode = 1;
-      continue;
-    }
-
-    if (!found) {
-      error(`  ✗ ${file}: file not found — request closed.`);
-      exitCode = 1;
-      continue;
-    }
-
-    if (isDirectory && !options.recursive) {
-      error(`  ✗ ${file}: is a directory. Use -r/--recursive to submit for review.`);
+    const isDirectory = await checkTarget(file, options.recursive);
+    if (isDirectory === undefined) {
       exitCode = 1;
       continue;
     }
@@ -82,18 +78,18 @@ export async function handleRm(
       forceCount++;
       const msg =
         forceCount > 1 ? pickRandom(FORCE_ESCALATION_MESSAGES) : pickRandom(FORCE_MESSAGES);
-      log(`  ${ticketId} — ${msg}`);
+      console.log(`  ${ticketId} — ${msg}`);
       verdict = "FORCED";
       reason = "Review bypassed via --force";
     } else {
       const result = await review(ticketId, options.approvalRate, isDirectory);
       if (!result.approved) {
-        log(`  ${ticketId} — ✗ DENIED: ${result.message}`);
+        console.log(`  ${ticketId} — ✗ DENIED: ${result.message}`);
         exitCode = 1;
-        await audit(ticketId, file, "DENIED", result.message);
+        await appendAudit({ ticketId, path: file, verdict: "DENIED", reason: result.message });
         continue;
       }
-      log(`  ${ticketId} — ✓ ${result.message}`);
+      console.log(`  ${ticketId} — ✓ ${result.message}`);
       verdict = "APPROVED";
       reason = result.message;
     }
@@ -103,7 +99,12 @@ export async function handleRm(
       continue;
     }
 
-    await audit(ticketId, file, options.dryRun ? "DRY-RUN" : verdict, reason);
+    await appendAudit({
+      ticketId,
+      path: file,
+      verdict: options.dryRun ? "DRY-RUN" : verdict,
+      reason,
+    });
   }
 
   return exitCode;

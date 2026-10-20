@@ -36,8 +36,8 @@ Without linking, run `npm start -- <command>` (or `node src/main.ts <command>`) 
 nigel rm <file> [files...]   # submit deletion requests, reviewed one at a time
 nigel status                 # department status board
 nigel audit                  # print the audit log
-nigel --help
-nigel --version
+nigel -h, --help
+nigel -v, --version
 ```
 
 Options for `rm`:
@@ -46,11 +46,13 @@ Options for `rm`:
 | --- | --- |
 | `-r`, `--recursive` | Allow directories. Without it, a directory is rejected. |
 | `--dry-run` | Run the full review but never delete. Approved requests are logged as `DRY-RUN`; denied ones as `DENIED`. |
-| `--force` | Skip the review and delete. Logged as `FORCED`. Nigel takes repeat offences within the same command personally, then forgets by the next one. |
-| `--approval-rate <0-100>` | Chance of approval, in percent. Default `70`. Out-of-range values are clamped; non-numeric values fall back to `70`. |
+| `-f`, `--force` | Skip the review and delete. Logged as `FORCED`. Nigel takes repeat offences within the same command personally, then forgets by the next one. |
+| `--approval-rate <0-100>` | Chance of approval, in percent: an integer from 0 to 100. Default `70`. Anything else is rejected with an error. |
 | `--appeal` | Submit the request again. Same as `rm`, and lets you leave out the `rm`: `nigel --appeal file.txt`. |
 
-The review animation is written to stderr; verdicts go to stdout.
+Short flags combine like `rm`'s: `nigel rm -rf build/` is `--recursive --force`. Flags take no value (`--dry-run=yes` is an error), and unknown or mistyped flags such as `--dryrun` are rejected with a one-line `nigel: ...` error on stderr before anything is reviewed or deleted.
+
+The review progress is written to stderr, as a spinner on a terminal and as one line per step when stderr is redirected; verdicts go to stdout.
 
 ### Audit log
 
@@ -67,7 +69,7 @@ Verdicts are `APPROVED`, `DENIED`, `FORCED` and `DRY-RUN`. Ticket numbers contin
 | Code | Meaning |
 | --- | --- |
 | `0` | Every request was approved (or forced) and carried out. |
-| `1` | At least one request was denied, the file was missing, a directory was given without `-r`, or deletion failed. Also returned when no files or no known command are given. |
+| `1` | At least one request was denied, the file was missing, a directory was given without `-r`, or deletion failed. Also returned for an unknown or mistyped flag, when no files or no known command are given (the usage text then goes to stderr), or when the audit log can't be read or written (reported as a single `nigel: ...` line on stderr). |
 
 ## Development
 

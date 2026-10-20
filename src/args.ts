@@ -1,23 +1,11 @@
 export const DEFAULT_APPROVAL_RATE = 70;
 
+/** Parses `--approval-rate`: an integer percentage from 0 to 100, or the default when absent. */
 export function parseApprovalRate(raw: string | undefined): number {
-  const parsed = raw === undefined ? NaN : parseInt(raw, 10);
-  const rate = Number.isNaN(parsed) ? DEFAULT_APPROVAL_RATE : parsed;
-  return Math.max(0, Math.min(100, rate));
-}
-
-/**
- * Reads a boolean flag from non-strict parseArgs, which yields the raw string
- * for `--flag=value`. Only `true` or `"true"` count as set.
- */
-export function flagSet(value: unknown): boolean {
-  return value === true || value === "true";
-}
-
-/**
- * Like flagSet, but fails safe for --dry-run: any explicit value other than
- * "false" keeps the dry run on, so a typo never turns it into a real delete.
- */
-export function dryRunSet(value: unknown): boolean {
-  return value === true || (typeof value === "string" && value !== "false");
+  if (raw === undefined) return DEFAULT_APPROVAL_RATE;
+  const rate = Number(raw);
+  if (!/^\d+$/.test(raw) || rate > 100) {
+    throw new Error(`invalid --approval-rate '${raw}': expected an integer from 0 to 100`);
+  }
+  return rate;
 }
