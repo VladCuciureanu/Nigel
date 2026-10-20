@@ -114,4 +114,7 @@ async function main(): Promise<void> {
   process.exitCode = 1;
 }
 
-main();
+main().catch((error: unknown) => {
+  console.error(`nigel: ${error instanceof Error ? error.message : String(error)}`);
+  process.exitCode = 1;
+});

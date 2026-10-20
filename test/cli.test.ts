@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -115,5 +115,19 @@ test("--appeal re-submits files given without the rm command", async () => {
     assert.equal(code, 0);
     assert.throws(() => readFileSync(file), { code: "ENOENT" });
     assert.match(nigel(["audit"], home).stdout, /NGL-00001 | FORCED |/);
+  });
+});
+
+test("an unwritable audit log is reported on one line, exit 1, without a stack", async () => {
+  await withHome(async (home) => {
+    // A directory where the log file should be makes every read and append fail.
+    await mkdir(join(home, ".nigel", "audit.log"), { recursive: true });
+    const file = join(home, "keep.txt");
+    await writeFile(file, "x");
+    for (const args of [["audit"], ["rm", "--force", file]]) {
+      const { code, stderr } = nigel(args, home);
+      assert.equal(code, 1);
+      assert.match(stderr, /^nigel: .+\n$/);
+    }
   });
 });

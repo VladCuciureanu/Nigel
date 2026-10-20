@@ -67,7 +67,7 @@ Verdicts are `APPROVED`, `DENIED`, `FORCED` and `DRY-RUN`. Ticket numbers contin
 | Code | Meaning |
 | --- | --- |
 | `0` | Every request was approved (or forced) and carried out. |
-| `1` | At least one request was denied, the file was missing, a directory was given without `-r`, or deletion failed. Also returned when no files or no known command are given. |
+| `1` | At least one request was denied, the file was missing, a directory was given without `-r`, or deletion failed. Also returned when no files or no known command are given, or when the audit log can't be read or written (reported as a single `nigel: ...` line on stderr). |
 
 ## Development
 
