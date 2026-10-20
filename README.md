@@ -6,7 +6,7 @@ Want to delete a file? Submit a request. It gets "reviewed." You get a decision 
 
 ## Install
 
-Requires [Node.js](https://nodejs.org/) 24 or newer (see `.nvmrc`).
+Requires [Node.js](https://nodejs.org/) 26 or newer (see `.nvmrc`).
 
 ```sh
 npm install
