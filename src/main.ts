@@ -2,16 +2,9 @@
 
 import process from "node:process";
 import { parseArgs } from "node:util";
-import { exists, safeDelete } from "./fs.ts";
-import { runReview } from "./review.ts";
-import { nextTicketId } from "./ticket.ts";
-import { appendAudit, readAuditLog } from "./audit.ts";
+import { readAuditLog } from "./audit.ts";
 import { parseApprovalRate } from "./args.ts";
-import {
-  FORCE_MESSAGES,
-  FORCE_ESCALATION_MESSAGES,
-  pickRandom,
-} from "./messages.ts";
+import { handleRm } from "./rm.ts";
 
 const VERSION = "0.1.0";
 
@@ -45,107 +38,6 @@ const STATUS_DASHBOARD = `
 │  Deletion quota:     72% consumed           │
 └─────────────────────────────────────────────┘
 `.trim();
-
-let forceCount = 0;
-
-async function handleRm(
-  files: string[],
-  options: {
-    dryRun: boolean;
-    force: boolean;
-    approvalRate: number;
-    recursive: boolean;
-  },
-): Promise<number> {
-  let exitCode = 0;
-
-  for (const file of files) {
-    let found: boolean;
-    let isDirectory: boolean;
-    try {
-      ({ found, isDirectory } = await exists(file));
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      console.error(`  ✗ ${file}: cannot access — ${reason}`);
-      exitCode = 1;
-      continue;
-    }
-
-    if (!found) {
-      console.error(`  ✗ ${file}: file not found — request closed.`);
-      exitCode = 1;
-      continue;
-    }
-
-    if (isDirectory && !options.recursive) {
-      console.error(`  ✗ ${file}: is a directory. Use -r/--recursive to submit for review.`);
-      exitCode = 1;
-      continue;
-    }
-
-    const ticketId = nextTicketId();
-
-    if (options.force) {
-      forceCount++;
-      const msg = forceCount > 1
-        ? pickRandom(FORCE_ESCALATION_MESSAGES)
-        : pickRandom(FORCE_MESSAGES);
-
-      console.log(`  ${ticketId} — ${msg}`);
-
-      if (!options.dryRun && !(await safeDelete(file, isDirectory))) {
-        exitCode = 1;
-        continue;
-      }
-
-      await appendAudit({
-        timestamp: new Date().toISOString(),
-        ticketId,
-        path: file,
-        verdict: "FORCED",
-        reason: "Review bypassed via --force",
-      });
-
-      continue;
-    }
-
-    const result = await runReview(ticketId, options.approvalRate, isDirectory);
-
-    if (result.approved) {
-      console.log(`  ${ticketId} — ✓ ${result.message}`);
-
-      if (!options.dryRun) {
-        if (!(await safeDelete(file, isDirectory))) {
-          exitCode = 1;
-          continue;
-        }
-      } else {
-        console.log(`  ${ticketId} — (dry run: file not actually deleted)`);
-      }
-
-      await appendAudit({
-        timestamp: new Date().toISOString(),
-        ticketId,
-        path: file,
-        verdict: "APPROVED",
-        reason: result.message,
-      });
-    } else {
-      console.log(`  ${ticketId} — ✗ DENIED: ${result.message}`);
-      exitCode = 1;
-
-      await appendAudit({
-        timestamp: new Date().toISOString(),
-        ticketId,
-        path: file,
-        verdict: "DENIED",
-        reason: result.message,
-      });
-    }
-  }
-
-  return exitCode;
-}
 
 async function main(): Promise<void> {
   // Non-strict to match @std/cli parseArgs: unknown flags are ignored, --no-<flag> negates.
