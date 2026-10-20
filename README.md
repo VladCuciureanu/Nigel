@@ -45,8 +45,8 @@ Options for `rm`:
 | Flag | Effect |
 | --- | --- |
 | `-r`, `--recursive` | Allow directories. Without it, a directory is rejected. |
-| `--dry-run` | Run the full review but never delete. Logged as `DRY-RUN`. |
-| `--force` | Skip the review and delete. Logged as `FORCED`. Nigel takes repeat offences personally. |
+| `--dry-run` | Run the full review but never delete. Approved requests are logged as `DRY-RUN`; denied ones as `DENIED`. |
+| `--force` | Skip the review and delete. Logged as `FORCED`. Nigel takes repeat offences within the same command personally, then forgets by the next one. |
 | `--approval-rate <0-100>` | Chance of approval, in percent. Default `70`. Out-of-range values are clamped; non-numeric values fall back to `70`. |
 | `--appeal` | Submit the request again. Same as `rm`, and lets you leave out the `rm`: `nigel --appeal file.txt`. |
 
@@ -54,7 +54,7 @@ The review animation is written to stderr; verdicts go to stdout.
 
 ### Audit log
 
-Every request is appended to `~/.nigel/audit.log`, one line each:
+Each request that gets a verdict and is carried out is appended to `~/.nigel/audit.log`: approved, forced and dry-run deletions, plus denials. Missing files, unreadable paths, directories given without `-r` and failed deletions are reported on stderr but not logged. One line per request:
 
 ```
 [2026-10-20T10:08:39.610Z] NGL-00001 | DENIED | report.txt | Unable to verify chain of custody. Request returned for clarification.
