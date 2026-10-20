@@ -19,16 +19,16 @@ $ nigel rm report.txt
 
 ## Requirements
 
-Node.js 26 or newer (see `.nvmrc`). Nigel runs its TypeScript sources directly; there is no build step.
+Node.js 26 or newer (see `.nvmrc`).
 
 ## Install
 
 ```sh
-npm install
+npm install     # also builds dist/
 npm link        # puts `nigel` on your PATH, pointing at this checkout
 ```
 
-Without linking, run `node src/main.ts <command>` instead of `nigel`.
+Without linking, run `npm start -- <command>` (or `node src/main.ts <command>`) instead of `nigel`.
 
 ## Usage
 
@@ -72,8 +72,13 @@ Verdicts are `APPROVED`, `DENIED`, `FORCED` and `DRY-RUN`. Ticket numbers contin
 ## Development
 
 ```sh
-npm test            # node --test, files in test/*_test.ts
+npm run dev         # run src/main.ts with --watch
+npm test            # node --test, files in test/*.test.ts
 npm run typecheck   # tsc, no emit
+npm run lint        # biome lint
+npm run format      # biome check --write (format, sort imports, safe fixes)
+npm run check       # biome check, typecheck and tests
+npm run build       # compile src/ to dist/
 ```
 
-CI runs both on every push and pull request.
+CI runs `npm run check` and `npm run build` on pushes to main and on pull requests.
