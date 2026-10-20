@@ -114,9 +114,20 @@ test("-rf deletes a directory without review, like rm", async () => {
   });
 });
 
-test("-h and -v are short for --help and --version", () => {
+test("-h is short for --help", () => {
   assert.match(nigel(["-h"]).stdout, /USAGE:/);
-  assert.equal(nigel(["-v"]).stdout.trim(), `nigel v${pkg.version}`);
+});
+
+test("rm -v is an unknown option: a usage error that deletes nothing", async () => {
+  await withTempHome(async (home) => {
+    const file = join(home, "keep.txt");
+    await writeFile(file, "x");
+    const { code, stdout, stderr } = nigel(["rm", "-v", file]);
+    assert.equal(code, 1);
+    assert.equal(stdout, "");
+    assert.match(stderr, /^nigel: Unknown option '-v'\. Run 'nigel --help' for usage\.\n$/);
+    assert.equal(readFileSync(file, "utf8"), "x");
+  });
 });
 
 test("--appeal re-submits files given without the rm command", async () => {

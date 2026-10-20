@@ -37,7 +37,7 @@ nigel rm <file> [files...]   # submit deletion requests, reviewed one at a time
 nigel status                 # department status board
 nigel audit                  # print the audit log
 nigel -h, --help
-nigel -v, --version
+nigel --version
 ```
 
 Options for `rm`:
