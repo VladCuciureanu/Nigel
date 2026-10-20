@@ -1,5 +1,5 @@
 import { type AuditEntry, appendAudit, readAuditRecords } from "./audit.ts";
-import { exists, safeDelete } from "./fs.ts";
+import { type PathInfo, safeDelete, statPath } from "./fs.ts";
 import { FORCE_ESCALATION_MESSAGES, FORCE_MESSAGES, pickRandom } from "./messages.ts";
 import { type ReviewResult, runReview } from "./review.ts";
 import { lastTicketNumber, ticketSequence } from "./ticket.ts";
@@ -14,6 +14,32 @@ export interface RmOptions {
 /** Collaborators of handleRm, injectable for tests. */
 export interface RmDeps {
   review?: (ticketId: string, approvalRate: number, recursive: boolean) => Promise<ReviewResult>;
+}
+
+/**
+ * Checks that `file` can be submitted for review and returns whether it is a directory.
+ * Returns undefined, after reporting why, when the file is missing, unreadable, or a
+ * directory without `recursive`.
+ */
+async function checkTarget(file: string, recursive: boolean): Promise<boolean | undefined> {
+  let target: PathInfo;
+  try {
+    target = await statPath(file);
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    console.error(`  ✗ ${file}: cannot access — ${reason}`);
+    return undefined;
+  }
+
+  if (!target.found) {
+    console.error(`  ✗ ${file}: file not found — request closed.`);
+    return undefined;
+  }
+  if (target.isDirectory && !recursive) {
+    console.error(`  ✗ ${file}: is a directory. Use -r/--recursive to submit for review.`);
+    return undefined;
+  }
+  return target.isDirectory;
 }
 
 export async function handleRm(
@@ -38,25 +64,8 @@ export async function handleRm(
   let forceCount = 0;
 
   for (const file of files) {
-    let found: boolean;
-    let isDirectory: boolean;
-    try {
-      ({ found, isDirectory } = await exists(file));
-    } catch (cause) {
-      const reason = cause instanceof Error ? cause.message : String(cause);
-      console.error(`  ✗ ${file}: cannot access — ${reason}`);
-      exitCode = 1;
-      continue;
-    }
-
-    if (!found) {
-      console.error(`  ✗ ${file}: file not found — request closed.`);
-      exitCode = 1;
-      continue;
-    }
-
-    if (isDirectory && !options.recursive) {
-      console.error(`  ✗ ${file}: is a directory. Use -r/--recursive to submit for review.`);
+    const isDirectory = await checkTarget(file, options.recursive);
+    if (isDirectory === undefined) {
       exitCode = 1;
       continue;
     }

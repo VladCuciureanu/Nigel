@@ -3,29 +3,29 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { exists, safeDelete } from "../src/fs.ts";
+import { safeDelete, statPath } from "../src/fs.ts";
 
 const tmp = tmpdir();
 
-test("exists returns false for non-existent path", async () => {
-  const result = await exists(join(tmp, `nigel-test-nonexistent-${Date.now()}`));
+test("statPath returns false for non-existent path", async () => {
+  const result = await statPath(join(tmp, `nigel-test-nonexistent-${Date.now()}`));
   assert.equal(result.found, false);
   assert.equal(result.isDirectory, false);
 });
 
-test("exists returns true for existing file", async () => {
+test("statPath returns true for existing file", async () => {
   const path = join(tmp, `nigel-test-${Date.now()}.txt`);
   await writeFile(path, "test");
-  const result = await exists(path);
+  const result = await statPath(path);
   assert.equal(result.found, true);
   assert.equal(result.isDirectory, false);
   await rm(path);
 });
 
-test("exists returns isDirectory true for directories", async () => {
+test("statPath returns isDirectory true for directories", async () => {
   const path = join(tmp, `nigel-test-dir-${Date.now()}`);
   await mkdir(path);
-  const result = await exists(path);
+  const result = await statPath(path);
   assert.equal(result.found, true);
   assert.equal(result.isDirectory, true);
   await rm(path, { recursive: true });
@@ -37,7 +37,7 @@ test("safeDelete removes a directory recursively", async () => {
   await writeFile(join(path, "file.txt"), "test");
   const ok = await safeDelete(path, true, () => {});
   assert.equal(ok, true);
-  assert.equal((await exists(path)).found, false);
+  assert.equal((await statPath(path)).found, false);
 });
 
 test("safeDelete reports a failing deletion instead of throwing", async () => {
@@ -57,12 +57,12 @@ test("safeDelete removes a file and reports nothing", async () => {
   const ok = await safeDelete(path, false, (message) => reports.push(message));
   assert.equal(ok, true);
   assert.deepEqual(reports, []);
-  assert.equal((await exists(path)).found, false);
+  assert.equal((await statPath(path)).found, false);
 });
 
-test("exists rethrows errors other than ENOENT", async () => {
+test("statPath rethrows errors other than ENOENT", async () => {
   // A NUL byte is rejected by the OS layer on every platform, so stat fails with a non-ENOENT error.
-  await assert.rejects(exists(join(tmp, "nigel\0invalid")), (error: NodeJS.ErrnoException) => {
+  await assert.rejects(statPath(join(tmp, "nigel\0invalid")), (error: NodeJS.ErrnoException) => {
     return error.code !== "ENOENT";
   });
 });

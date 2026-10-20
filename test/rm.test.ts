@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { type TestContext, test } from "node:test";
-import { exists } from "../src/fs.ts";
+import { statPath } from "../src/fs.ts";
 import { FORCE_ESCALATION_MESSAGES } from "../src/messages.ts";
 import { handleRm, type RmDeps, type RmOptions } from "../src/rm.ts";
 import { withTempHome } from "./helpers.ts";
@@ -40,7 +40,7 @@ test("handleRm deletes an approved file and logs APPROVED", async () => {
     await writeFile(file, "x");
     const deps = fakeDeps(true);
     assert.equal(await handleRm([file], defaults, deps), 0);
-    assert.equal((await exists(file)).found, false);
+    assert.equal((await statPath(file)).found, false);
     const [line] = await auditLines(home);
     assert.match(line, /\| APPROVED \|/);
     assert.ok(line.includes(file));
@@ -53,7 +53,7 @@ test("handleRm keeps a denied file, exits 1 and logs DENIED", async () => {
     await writeFile(file, "x");
     const deps = fakeDeps(false);
     assert.equal(await handleRm([file], defaults, deps), 1);
-    assert.equal((await exists(file)).found, true);
+    assert.equal((await statPath(file)).found, true);
     assert.match((await auditLines(home))[0], /\| DENIED \| .* \| Denied\.$/);
   });
 });
@@ -78,7 +78,7 @@ test("handleRm refuses a directory without --recursive and deletes it with it", 
     assert.equal(await handleRm([dir], defaults, deps), 1);
     assert.match(output.err[0], /is a directory/);
     assert.equal(await handleRm([dir], { ...defaults, recursive: true }, deps), 0);
-    assert.equal((await exists(dir)).found, false);
+    assert.equal((await statPath(dir)).found, false);
   });
 });
 
@@ -92,8 +92,8 @@ test("handleRm --force skips review, escalates on repeat, and logs FORCED", asyn
     const deps = fakeDeps(false);
     assert.equal(await handleRm([a, b], { ...defaults, force: true }, deps), 0);
     assert.equal(deps.reviews, 0);
-    assert.equal((await exists(a)).found, false);
-    assert.equal((await exists(b)).found, false);
+    assert.equal((await statPath(a)).found, false);
+    assert.equal((await statPath(b)).found, false);
     assert.ok(FORCE_ESCALATION_MESSAGES.some((msg) => output.out[1].includes(msg)));
     const lines = await auditLines(home);
     assert.equal(lines.length, 2);
@@ -108,7 +108,7 @@ test("handleRm --dry-run keeps an approved file", async (t) => {
     await writeFile(file, "x");
     const deps = fakeDeps(true);
     assert.equal(await handleRm([file], { ...defaults, dryRun: true }, deps), 0);
-    assert.equal((await exists(file)).found, true);
+    assert.equal((await statPath(file)).found, true);
     assert.ok(output.out.some((line) => line.includes("dry run")));
   });
 });
@@ -130,7 +130,7 @@ test("handleRm --force --dry-run keeps the file, prints the notice and logs DRY-
     await writeFile(file, "x");
     const deps = fakeDeps(true);
     assert.equal(await handleRm([file], { ...defaults, force: true, dryRun: true }, deps), 0);
-    assert.equal((await exists(file)).found, true);
+    assert.equal((await statPath(file)).found, true);
     assert.ok(output.out.some((line) => line.includes("dry run: file not actually deleted")));
     const [line] = await auditLines(home);
     assert.match(line, /\| DRY-RUN \|/);
