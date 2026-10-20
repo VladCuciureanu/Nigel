@@ -54,7 +54,7 @@ The review animation is written to stderr; verdicts go to stdout.
 
 ### Audit log
 
-Each request that gets a verdict and is carried out is appended to `~/.nigel/audit.log`: approved, forced and dry-run deletions, plus denials. Missing files, unreadable paths, directories given without `-r` and failed deletions are reported on stderr but not logged. One line per request:
+Each request that reaches a verdict is appended to `~/.nigel/audit.log`: approved, forced and dry-run deletions, plus denials. Missing files, unreadable paths, directories given without `-r` and failed deletions are reported on stderr but not logged. One line per request:
 
 ```
 [2026-10-20T10:08:39.610Z] NGL-00001 | DENIED | report.txt | Unable to verify chain of custody. Request returned for clarification.
