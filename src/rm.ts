@@ -16,15 +16,6 @@ export interface RmDeps {
   review?: (ticketId: string, approvalRate: number, recursive: boolean) => Promise<ReviewResult>;
 }
 
-async function audit(
-  ticketId: string,
-  path: string,
-  verdict: AuditEntry["verdict"],
-  reason: string,
-): Promise<void> {
-  await appendAudit({ timestamp: new Date().toISOString(), ticketId, path, verdict, reason });
-}
-
 export async function handleRm(
   files: string[],
   options: RmOptions,
@@ -86,7 +77,7 @@ export async function handleRm(
       if (!result.approved) {
         console.log(`  ${ticketId} — ✗ DENIED: ${result.message}`);
         exitCode = 1;
-        await audit(ticketId, file, "DENIED", result.message);
+        await appendAudit({ ticketId, path: file, verdict: "DENIED", reason: result.message });
         continue;
       }
       console.log(`  ${ticketId} — ✓ ${result.message}`);
@@ -99,7 +90,12 @@ export async function handleRm(
       continue;
     }
 
-    await audit(ticketId, file, options.dryRun ? "DRY-RUN" : verdict, reason);
+    await appendAudit({
+      ticketId,
+      path: file,
+      verdict: options.dryRun ? "DRY-RUN" : verdict,
+      reason,
+    });
   }
 
   return exitCode;

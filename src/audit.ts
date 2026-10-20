@@ -11,20 +11,23 @@ function getAuditPath(): string {
 }
 
 export interface AuditEntry {
-  timestamp: string;
+  /** ISO 8601; appendAudit uses the current time when omitted. */
+  timestamp?: string;
   ticketId: string;
   path: string;
   verdict: "APPROVED" | "DENIED" | "FORCED" | "DRY-RUN";
   reason: string;
 }
 
-function formatEntry(entry: AuditEntry): string {
-  return `[${entry.timestamp}] ${entry.ticketId} | ${entry.verdict} | ${entry.path} | ${entry.reason}`;
-}
-
-export async function appendAudit(entry: AuditEntry): Promise<void> {
+export async function appendAudit({
+  timestamp = new Date().toISOString(),
+  ticketId,
+  path,
+  verdict,
+  reason,
+}: AuditEntry): Promise<void> {
   await mkdir(getAuditDir(), { recursive: true });
-  const line = `${formatEntry(entry)}\n`;
+  const line = `[${timestamp}] ${ticketId} | ${verdict} | ${path} | ${reason}\n`;
   await appendFile(getAuditPath(), line, "utf8");
 }
 
