@@ -14,8 +14,6 @@ export interface RmOptions {
 /** Collaborators of handleRm, injectable for tests. */
 export interface RmDeps {
   review?: (ticketId: string, approvalRate: number, recursive: boolean) => Promise<ReviewResult>;
-  log?: (message: string) => void;
-  error?: (message: string) => void;
 }
 
 async function audit(
@@ -33,16 +31,14 @@ export async function handleRm(
   deps: RmDeps = {},
 ): Promise<number> {
   const review = deps.review ?? runReview;
-  const log = deps.log ?? console.log;
-  const error = deps.error ?? console.error;
 
   // Deletes the file, or only announces it on a dry run; reports failures and returns false.
   const remove = async (ticketId: string, file: string, isDirectory: boolean): Promise<boolean> => {
     if (options.dryRun) {
-      log(`  ${ticketId} — (dry run: file not actually deleted)`);
+      console.log(`  ${ticketId} — (dry run: file not actually deleted)`);
       return true;
     }
-    return await safeDelete(file, isDirectory, error);
+    return await safeDelete(file, isDirectory);
   };
 
   // Continue numbering from the audit log so IDs stay unique across runs.
@@ -57,19 +53,19 @@ export async function handleRm(
       ({ found, isDirectory } = await exists(file));
     } catch (cause) {
       const reason = cause instanceof Error ? cause.message : String(cause);
-      error(`  ✗ ${file}: cannot access — ${reason}`);
+      console.error(`  ✗ ${file}: cannot access — ${reason}`);
       exitCode = 1;
       continue;
     }
 
     if (!found) {
-      error(`  ✗ ${file}: file not found — request closed.`);
+      console.error(`  ✗ ${file}: file not found — request closed.`);
       exitCode = 1;
       continue;
     }
 
     if (isDirectory && !options.recursive) {
-      error(`  ✗ ${file}: is a directory. Use -r/--recursive to submit for review.`);
+      console.error(`  ✗ ${file}: is a directory. Use -r/--recursive to submit for review.`);
       exitCode = 1;
       continue;
     }
@@ -82,18 +78,18 @@ export async function handleRm(
       forceCount++;
       const msg =
         forceCount > 1 ? pickRandom(FORCE_ESCALATION_MESSAGES) : pickRandom(FORCE_MESSAGES);
-      log(`  ${ticketId} — ${msg}`);
+      console.log(`  ${ticketId} — ${msg}`);
       verdict = "FORCED";
       reason = "Review bypassed via --force";
     } else {
       const result = await review(ticketId, options.approvalRate, isDirectory);
       if (!result.approved) {
-        log(`  ${ticketId} — ✗ DENIED: ${result.message}`);
+        console.log(`  ${ticketId} — ✗ DENIED: ${result.message}`);
         exitCode = 1;
         await audit(ticketId, file, "DENIED", result.message);
         continue;
       }
-      log(`  ${ticketId} — ✓ ${result.message}`);
+      console.log(`  ${ticketId} — ✓ ${result.message}`);
       verdict = "APPROVED";
       reason = result.message;
     }

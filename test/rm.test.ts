@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { test } from "node:test";
+import { type TestContext, test } from "node:test";
 import { exists } from "../src/fs.ts";
 import { FORCE_ESCALATION_MESSAGES } from "../src/messages.ts";
 import { handleRm, type RmDeps, type RmOptions } from "../src/rm.ts";
@@ -9,23 +9,24 @@ import { withTempHome } from "./helpers.ts";
 
 const defaults: RmOptions = { dryRun: false, force: false, approvalRate: 70, recursive: false };
 
-function fakeDeps(approved: boolean): RmDeps & { out: string[]; err: string[]; reviews: number } {
+function fakeDeps(approved: boolean): RmDeps & { reviews: number } {
   const deps = {
-    out: [] as string[],
-    err: [] as string[],
     reviews: 0,
     review: async () => {
       deps.reviews++;
       return { approved, message: approved ? "Approved." : "Denied." };
     },
-    log: (message: string) => {
-      deps.out.push(message);
-    },
-    error: (message: string) => {
-      deps.err.push(message);
-    },
   };
   return deps;
+}
+
+/** Captures console.log and console.error for the rest of the test. */
+function captureConsole(t: TestContext): { out: string[]; err: string[] } {
+  const out: string[] = [];
+  const err: string[] = [];
+  t.mock.method(console, "log", (message: string) => out.push(message));
+  t.mock.method(console, "error", (message: string) => err.push(message));
+  return { out, err };
 }
 
 async function auditLines(home: string): Promise<string[]> {
@@ -57,29 +58,32 @@ test("handleRm keeps a denied file, exits 1 and logs DENIED", async () => {
   });
 });
 
-test("handleRm reports a missing file without reviewing it", async () => {
+test("handleRm reports a missing file without reviewing it", async (t) => {
+  const output = captureConsole(t);
   await withTempHome(async (home) => {
     const deps = fakeDeps(true);
     assert.equal(await handleRm([join(home, "nope.txt")], defaults, deps), 1);
     assert.equal(deps.reviews, 0);
-    assert.match(deps.err[0], /file not found/);
+    assert.match(output.err[0], /file not found/);
   });
 });
 
-test("handleRm refuses a directory without --recursive and deletes it with it", async () => {
+test("handleRm refuses a directory without --recursive and deletes it with it", async (t) => {
+  const output = captureConsole(t);
   await withTempHome(async (home) => {
     const dir = join(home, "dir");
     await mkdir(dir);
     await writeFile(join(dir, "f.txt"), "x");
     const deps = fakeDeps(true);
     assert.equal(await handleRm([dir], defaults, deps), 1);
-    assert.match(deps.err[0], /is a directory/);
+    assert.match(output.err[0], /is a directory/);
     assert.equal(await handleRm([dir], { ...defaults, recursive: true }, deps), 0);
     assert.equal((await exists(dir)).found, false);
   });
 });
 
-test("handleRm --force skips review, escalates on repeat, and logs FORCED", async () => {
+test("handleRm --force skips review, escalates on repeat, and logs FORCED", async (t) => {
+  const output = captureConsole(t);
   await withTempHome(async (home) => {
     const a = join(home, "a.txt");
     const b = join(home, "b.txt");
@@ -90,21 +94,22 @@ test("handleRm --force skips review, escalates on repeat, and logs FORCED", asyn
     assert.equal(deps.reviews, 0);
     assert.equal((await exists(a)).found, false);
     assert.equal((await exists(b)).found, false);
-    assert.ok(FORCE_ESCALATION_MESSAGES.some((msg) => deps.out[1].includes(msg)));
+    assert.ok(FORCE_ESCALATION_MESSAGES.some((msg) => output.out[1].includes(msg)));
     const lines = await auditLines(home);
     assert.equal(lines.length, 2);
     assert.ok(lines.every((line) => line.includes("| FORCED |")));
   });
 });
 
-test("handleRm --dry-run keeps an approved file", async () => {
+test("handleRm --dry-run keeps an approved file", async (t) => {
+  const output = captureConsole(t);
   await withTempHome(async (home) => {
     const file = join(home, "a.txt");
     await writeFile(file, "x");
     const deps = fakeDeps(true);
     assert.equal(await handleRm([file], { ...defaults, dryRun: true }, deps), 0);
     assert.equal((await exists(file)).found, true);
-    assert.ok(deps.out.some((line) => line.includes("dry run")));
+    assert.ok(output.out.some((line) => line.includes("dry run")));
   });
 });
 
@@ -118,14 +123,15 @@ test("handleRm --dry-run logs a DRY-RUN verdict, not APPROVED", async () => {
   });
 });
 
-test("handleRm --force --dry-run keeps the file, prints the notice and logs DRY-RUN", async () => {
+test("handleRm --force --dry-run keeps the file, prints the notice and logs DRY-RUN", async (t) => {
+  const output = captureConsole(t);
   await withTempHome(async (home) => {
     const file = join(home, "a.txt");
     await writeFile(file, "x");
     const deps = fakeDeps(true);
     assert.equal(await handleRm([file], { ...defaults, force: true, dryRun: true }, deps), 0);
     assert.equal((await exists(file)).found, true);
-    assert.ok(deps.out.some((line) => line.includes("dry run: file not actually deleted")));
+    assert.ok(output.out.some((line) => line.includes("dry run: file not actually deleted")));
     const [line] = await auditLines(home);
     assert.match(line, /\| DRY-RUN \|/);
   });
