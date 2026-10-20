@@ -1,8 +1,8 @@
-import { appendAudit, type AuditEntry } from "./audit.ts";
+import { appendAudit, readAuditRecords, type AuditEntry } from "./audit.ts";
 import { exists, safeDelete } from "./fs.ts";
 import { FORCE_ESCALATION_MESSAGES, FORCE_MESSAGES, pickRandom } from "./messages.ts";
 import { runReview, type ReviewResult } from "./review.ts";
-import { nextTicketId } from "./ticket.ts";
+import { lastTicketNumber, ticketSequence } from "./ticket.ts";
 
 export interface RmOptions {
   dryRun: boolean;
@@ -45,6 +45,8 @@ export async function handleRm(
     return await safeDelete(file, isDirectory, error);
   };
 
+  // Continue numbering from the audit log so IDs stay unique across runs.
+  const nextTicketId = ticketSequence(lastTicketNumber(await readAuditRecords()));
   let exitCode = 0;
   let forceCount = 0;
 

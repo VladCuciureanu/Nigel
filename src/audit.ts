@@ -1,7 +1,6 @@
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { exists } from "./fs.ts";
 
 function getAuditDir(): string {
   return join(homedir(), ".nigel");
@@ -29,11 +28,17 @@ export async function appendAudit(entry: AuditEntry): Promise<void> {
   await appendFile(getAuditPath(), line, "utf8");
 }
 
-export async function readAuditLog(): Promise<string> {
-  const path = getAuditPath();
-  const { found } = await exists(path);
-  if (!found) {
-    return "No audit records found.";
+/** Raw audit log contents, or "" when nothing has been logged yet. */
+export async function readAuditRecords(): Promise<string> {
+  try {
+    return await readFile(getAuditPath(), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return "";
+    throw error;
   }
-  return await readFile(path, "utf8");
+}
+
+export async function readAuditLog(): Promise<string> {
+  const records = await readAuditRecords();
+  return records === "" ? "No audit records found." : records;
 }

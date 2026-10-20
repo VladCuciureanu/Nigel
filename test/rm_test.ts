@@ -130,3 +130,21 @@ test("handleRm --force --dry-run keeps the file, prints the notice and logs DRY-
     assert.match(line, /\| DRY-RUN \|/);
   });
 });
+
+test("handleRm continues ticket numbering from the audit log across runs", async () => {
+  await withTempHome(async (home) => {
+    await mkdir(join(home, ".nigel"));
+    await writeFile(
+      join(home, ".nigel", "audit.log"),
+      "[2026-01-01T00:00:00.000Z] NGL-00041 | DENIED | NGL-99999.txt | No.\n",
+    );
+    const a = join(home, "a.txt");
+    const b = join(home, "b.txt");
+    await writeFile(a, "x");
+    await writeFile(b, "x");
+    await handleRm([a, b], defaults, fakeDeps(true));
+    const lines = await auditLines(home);
+    assert.match(lines[1], /\] NGL-00042 \|/);
+    assert.match(lines[2], /\] NGL-00043 \|/);
+  });
+});
