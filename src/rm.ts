@@ -36,9 +36,14 @@ export async function handleRm(
   const log = deps.log ?? console.log;
   const error = deps.error ?? console.error;
 
-  // Deletes the file unless this is a dry run; reports failures and returns false.
-  const remove = (file: string, isDirectory: boolean): Promise<boolean> =>
-    options.dryRun ? Promise.resolve(true) : safeDelete(file, isDirectory, error);
+  // Deletes the file, or only announces it on a dry run; reports failures and returns false.
+  const remove = async (ticketId: string, file: string, isDirectory: boolean): Promise<boolean> => {
+    if (options.dryRun) {
+      log(`  ${ticketId} — (dry run: file not actually deleted)`);
+      return true;
+    }
+    return await safeDelete(file, isDirectory, error);
+  };
 
   let exitCode = 0;
   let forceCount = 0;
@@ -88,19 +93,16 @@ export async function handleRm(
         continue;
       }
       log(`  ${ticketId} — ✓ ${result.message}`);
-      if (options.dryRun) {
-        log(`  ${ticketId} — (dry run: file not actually deleted)`);
-      }
       verdict = "APPROVED";
       reason = result.message;
     }
 
-    if (!(await remove(file, isDirectory))) {
+    if (!(await remove(ticketId, file, isDirectory))) {
       exitCode = 1;
       continue;
     }
 
-    await audit(ticketId, file, verdict, reason);
+    await audit(ticketId, file, options.dryRun ? "DRY-RUN" : verdict, reason);
   }
 
   return exitCode;

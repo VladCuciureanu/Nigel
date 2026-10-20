@@ -15,7 +15,7 @@ export interface AuditEntry {
   timestamp: string;
   ticketId: string;
   path: string;
-  verdict: "APPROVED" | "DENIED" | "FORCED";
+  verdict: "APPROVED" | "DENIED" | "FORCED" | "DRY-RUN";
   reason: string;
 }
 

@@ -107,3 +107,26 @@ test("handleRm --dry-run keeps an approved file", async () => {
     assert.ok(deps.out.some((line) => line.includes("dry run")));
   });
 });
+
+test("handleRm --dry-run logs a DRY-RUN verdict, not APPROVED", async () => {
+  await withTempHome(async (home) => {
+    const file = join(home, "a.txt");
+    await writeFile(file, "x");
+    await handleRm([file], { ...defaults, dryRun: true }, fakeDeps(true));
+    const [line] = await auditLines(home);
+    assert.match(line, /\| DRY-RUN \|/);
+  });
+});
+
+test("handleRm --force --dry-run keeps the file, prints the notice and logs DRY-RUN", async () => {
+  await withTempHome(async (home) => {
+    const file = join(home, "a.txt");
+    await writeFile(file, "x");
+    const deps = fakeDeps(true);
+    assert.equal(await handleRm([file], { ...defaults, force: true, dryRun: true }, deps), 0);
+    assert.equal((await exists(file)).found, true);
+    assert.ok(deps.out.some((line) => line.includes("dry run: file not actually deleted")));
+    const [line] = await auditLines(home);
+    assert.match(line, /\| DRY-RUN \|/);
+  });
+});
