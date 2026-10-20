@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import process from "node:process";
 import { parseArgs } from "node:util";
-import { parseApprovalRate } from "./args.ts";
+import { DEFAULT_APPROVAL_RATE, parseApprovalRate } from "./args.ts";
 import { readAuditLog } from "./audit.ts";
 import { handleRm } from "./rm.ts";
 
@@ -23,7 +23,7 @@ OPTIONS:
   --dry-run                    Run review but never actually delete
   -f, --force                  Skip review (escalated)
   --appeal                     Re-submit a request (same as rm)
-  --approval-rate <0-100>      Override approval probability (default: 70)
+  --approval-rate <0-100>      Approval probability in percent (default: ${DEFAULT_APPROVAL_RATE})
   -r, --recursive              Required for directories
   -h, --help                   Show this help
   -v, --version                Show version
@@ -53,7 +53,7 @@ function parseCommandLine(args: string[]) {
         force: { type: "boolean", short: "f", default: false },
         appeal: { type: "boolean", default: false },
         recursive: { type: "boolean", short: "r", default: false },
-        "approval-rate": { type: "string", default: "70" },
+        "approval-rate": { type: "string" },
       },
       allowPositionals: true,
     });

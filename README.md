@@ -47,7 +47,7 @@ Options for `rm`:
 | `-r`, `--recursive` | Allow directories. Without it, a directory is rejected. |
 | `--dry-run` | Run the full review but never delete. Approved requests are logged as `DRY-RUN`; denied ones as `DENIED`. |
 | `-f`, `--force` | Skip the review and delete. Logged as `FORCED`. Nigel takes repeat offences within the same command personally, then forgets by the next one. |
-| `--approval-rate <0-100>` | Chance of approval, in percent. Default `70`. Out-of-range values are clamped; non-numeric values fall back to `70`. |
+| `--approval-rate <0-100>` | Chance of approval, in percent: an integer from 0 to 100. Default `70`. Anything else is rejected with an error. |
 | `--appeal` | Submit the request again. Same as `rm`, and lets you leave out the `rm`: `nigel --appeal file.txt`. |
 
 Short flags combine like `rm`'s: `nigel rm -rf build/` is `--recursive --force`. Flags take no value (`--dry-run=yes` is an error), and unknown or mistyped flags such as `--dryrun` are rejected with a one-line `nigel: ...` error on stderr before anything is reviewed or deleted.

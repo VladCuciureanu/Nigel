@@ -1,20 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseApprovalRate } from "../src/args.ts";
+import { DEFAULT_APPROVAL_RATE, parseApprovalRate } from "../src/args.ts";
 
-test("parseApprovalRate honors 0", () => {
+test("parseApprovalRate accepts integers from 0 to 100", () => {
   assert.equal(parseApprovalRate("0"), 0);
+  assert.equal(parseApprovalRate("55"), 55);
+  assert.equal(parseApprovalRate("100"), 100);
 });
 
-test("parseApprovalRate defaults to 70 when absent", () => {
-  assert.equal(parseApprovalRate(undefined), 70);
+test("parseApprovalRate defaults when absent", () => {
+  assert.equal(parseApprovalRate(undefined), DEFAULT_APPROVAL_RATE);
 });
 
-test("parseApprovalRate defaults to 70 when not a number", () => {
-  assert.equal(parseApprovalRate("abc"), 70);
-});
-
-test("parseApprovalRate clamps to 0-100", () => {
-  assert.equal(parseApprovalRate("150"), 100);
-  assert.equal(parseApprovalRate("-5"), 0);
-});
+for (const raw of ["abc", "50x", "", " 50", "1.5", "1e2", "-5", "101", "150"]) {
+  test(`parseApprovalRate rejects ${JSON.stringify(raw)}`, () => {
+    assert.throws(() => parseApprovalRate(raw), {
+      message: `invalid --approval-rate '${raw}': expected an integer from 0 to 100`,
+    });
+  });
+}

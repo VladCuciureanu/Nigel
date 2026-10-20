@@ -155,3 +155,23 @@ test("an unwritable audit log is reported on one line, exit 1, without a stack",
     }
   });
 });
+
+for (const rate of ["abc", "50x", "150", "-5"]) {
+  test(`--approval-rate=${rate} is rejected before any review`, async () => {
+    await withHome(async (home) => {
+      const file = join(home, "keep.txt");
+      await writeFile(file, "x");
+      const { code, stdout, stderr } = nigel(
+        ["rm", "--force", `--approval-rate=${rate}`, file],
+        home,
+      );
+      assert.equal(code, 1);
+      assert.equal(stdout, "");
+      assert.equal(
+        stderr,
+        `nigel: invalid --approval-rate '${rate}': expected an integer from 0 to 100\n`,
+      );
+      assert.equal(readFileSync(file, "utf8"), "x");
+    });
+  });
+}
