@@ -8,7 +8,7 @@ import { exists, safeDelete } from "../src/fs.ts";
 const tmp = tmpdir();
 
 test("exists returns false for non-existent path", async () => {
-  const result = await exists(join(tmp, "nigel-test-nonexistent-" + Date.now()));
+  const result = await exists(join(tmp, `nigel-test-nonexistent-${Date.now()}`));
   assert.equal(result.found, false);
   assert.equal(result.isDirectory, false);
 });

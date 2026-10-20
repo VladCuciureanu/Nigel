@@ -24,7 +24,7 @@ function formatEntry(entry: AuditEntry): string {
 
 export async function appendAudit(entry: AuditEntry): Promise<void> {
   await mkdir(getAuditDir(), { recursive: true });
-  const line = formatEntry(entry) + "\n";
+  const line = `${formatEntry(entry)}\n`;
   await appendFile(getAuditPath(), line, "utf8");
 }
 
