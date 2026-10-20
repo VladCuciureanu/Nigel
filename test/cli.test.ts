@@ -188,3 +188,15 @@ test("--approval-rate with no value is a one-line usage error", () => {
   assert.match(stderr, /^nigel: [^\n]+\. Run 'nigel --help' for usage\.\n$/);
   assert.doesNotMatch(stderr, /\.\./);
 });
+
+test("--approval-rate followed by a long flag reports the missing value on one line", async () => {
+  await withTempHome(async (home) => {
+    const file = join(home, "keep.txt");
+    await writeFile(file, "x");
+    const { code, stdout, stderr } = nigel(["rm", "--approval-rate", "--force", file]);
+    assert.equal(code, 1);
+    assert.equal(stdout, "");
+    assert.equal(stderr, "nigel: option '--approval-rate' needs a value\n");
+    assert.equal(readFileSync(file, "utf8"), "x");
+  });
+});

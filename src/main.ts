@@ -62,6 +62,8 @@ function ambiguousValueMessage(args: string[]): string | undefined {
     // Without strict mode parseArgs takes the dash-led next argument as the value.
     if (token.kind !== "option" || token.inlineValue !== false) continue;
     const { value } = token;
+    // A long flag in the value slot means the value was left out, not that it starts with a dash.
+    if (value?.startsWith("--")) return `option '${token.rawName}' needs a value`;
     if (value?.startsWith("-")) {
       return `option '${token.rawName}' got '${value}', which looks like an option; write --${token.name}=${value}`;
     }
